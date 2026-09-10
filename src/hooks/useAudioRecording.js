@@ -8,6 +8,7 @@ import { expandSnippets } from "../utils/snippets";
 import { getRecordingErrorTitle, getRecordingErrorDescription } from "../utils/recordingErrors";
 import { isAccessibilitySkipped } from "../utils/permissions";
 import { needsSttConfigBeforeStart } from "../helpers/sttConfigPolicy";
+import { PRODUCT_FEATURES } from "../config/productFeatures.js";
 import {
   isAgentAllowed,
   isScreenContextAllowed,
@@ -194,7 +195,7 @@ export const useAudioRecording = (toast, options = {}) => {
         // Await it only when it can change the start decision (signed-in
         // OpenWhispr-cloud streaming); for local STT or a signed-out session the
         // fetch stalls on auth resolution and would delay the mic open (#1673).
-        if (!audioManagerRef.current.sttConfig) {
+        if (PRODUCT_FEATURES.openWhisprCloud && !audioManagerRef.current.sttConfig) {
           const configFetch = (async () => {
             const config = await window.electronAPI.getSttConfig?.();
             if (config?.success) {
@@ -698,14 +699,16 @@ export const useAudioRecording = (toast, options = {}) => {
     const unsubscribePolicy = usePolicyStore.subscribe(() => {
       window.electronAPI.setScreenContextEnabled?.(getSettings().voiceAgentScreenContext);
     });
-    window.electronAPI.getSttConfig?.().then((config) => {
-      if (config?.success && audioManagerRef.current) {
-        audioManagerRef.current.setSttConfig(config);
-        if (audioManagerRef.current.shouldUseStreaming()) {
-          audioManagerRef.current.warmupStreamingConnection();
+    if (PRODUCT_FEATURES.openWhisprCloud) {
+      window.electronAPI.getSttConfig?.().then((config) => {
+        if (config?.success && audioManagerRef.current) {
+          audioManagerRef.current.setSttConfig(config);
+          if (audioManagerRef.current.shouldUseStreaming()) {
+            audioManagerRef.current.warmupStreamingConnection();
+          }
         }
-      }
-    });
+      });
+    }
 
     const handleToggle = async ({
       voiceAgentRequested = false,

@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const loadPolicy = () => import("../../src/helpers/sttConfigPolicy.js");
 
 describe("needsSttConfigBeforeStart", () => {
-  test("signed-in OpenWhispr cloud mode blocks the start on the config", async () => {
+  test("signed-in OpenWhispr cloud mode does not block when Cloud is disabled", async () => {
     const { needsSttConfigBeforeStart } = await loadPolicy();
     assert.equal(
       needsSttConfigBeforeStart({
@@ -12,7 +12,7 @@ describe("needsSttConfigBeforeStart", () => {
         cloudTranscriptionMode: "openwhispr",
         isSignedIn: true,
       }),
-      true
+      false
     );
   });
 
@@ -64,4 +64,5 @@ describe("needsSttConfigBeforeStart", () => {
     assert.equal(needsSttConfigBeforeStart(null), false);
     assert.equal(needsSttConfigBeforeStart({}), false);
   });
+
 });
