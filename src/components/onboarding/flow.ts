@@ -1,4 +1,5 @@
 import { PENDING_LOCAL_MODELS_KEY } from "./pendingLocalModels";
+import { PRODUCT_FEATURES } from "../../config/productFeatures.js";
 
 export const ONBOARDING_SESSION_KEY = "onboardingSessionV2";
 export const LEGACY_ONBOARDING_STEP_KEY = "onboardingCurrentStep";
@@ -181,9 +182,9 @@ export function createOnboardingResumeState(): OnboardingResumeState {
 export function createOnboardingSession(): OnboardingSession {
   return {
     version: ONBOARDING_FLOW_VERSION,
-    currentStepId: "auth",
+    currentStepId: PRODUCT_FEATURES.openWhisprAccount ? "auth" : "permissions",
     history: [],
-    authPath: null,
+    authPath: PRODUCT_FEATURES.openWhisprAccount ? null : "guest",
     setupMode: null,
     selfHostedRequested: false,
     resume: createOnboardingResumeState(),
@@ -203,6 +204,18 @@ export function resetOnboardingProgress(storage: OnboardingStorage): void {
 }
 
 export function getOnboardingRoute(context: OnboardingRouteContext): OnboardingStepId[] {
+  if (!PRODUCT_FEATURES.openWhisprAccount) {
+    const route: OnboardingStepId[] = [
+      "permissions",
+      "dictation-hotkey",
+      "activation-mode",
+      "setup-choice",
+    ];
+    if (context.setupMode === "byok") route.push("byok-dictation");
+    else if (context.setupMode === "local") route.push("local-dictation");
+    return route;
+  }
+
   if (context.authPath === null) return ["auth"];
 
   const setupChoice = context.skipSetupChoice ? [] : (["setup-choice"] as OnboardingStepId[]);
