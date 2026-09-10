@@ -1,5 +1,6 @@
 {
   "appId": "com.gizmolabs.openwhispr",
+  "beforePack": "scripts/beforePack.js",
   "afterPack": "scripts/afterPack.js",
   "productName": "OpenWhispr",
   "protocols": {
@@ -88,7 +89,10 @@
     "!**/node_modules/**/.github/**"
   ],
   "asarUnpack": [
-    "**/node_modules/ffmpeg-static/**/*",
+    "**/node_modules/ffmpeg-static",
+    "**/node_modules/ffmpeg-static/**",
+    "**/node_modules/ffmpeg-static/ffmpeg",
+    "**/node_modules/ffmpeg-static/ffmpeg.exe",
     "**/node_modules/ps-list/**/*",
     "**/node_modules/better-sqlite3/**/*",
     "**/node_modules/onnxruntime-node/**/*",
