@@ -9438,7 +9438,13 @@ class IPCHandlers {
 
     ipcMain.handle("cloud-api-request", (_event, opts) => handleCloudApiRequest(opts));
 
-    ipcMain.handle("get-stt-config", handleSttConfigRequest);
+    ipcMain.handle("get-stt-config", (event) => {
+      const { openWhisprCloud } = require("../config/productFeatures.json");
+      if (!openWhisprCloud) {
+        return { success: false, skipped: true };
+      }
+      return handleSttConfigRequest(event);
+    });
 
     ipcMain.handle("get-workspace-policy", async (event, accountId, expectedAuthGeneration) => {
       const authHeaders = await getAuthHeader(event);
