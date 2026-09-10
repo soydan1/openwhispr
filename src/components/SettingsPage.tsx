@@ -144,10 +144,7 @@ import {
 import { usePolicyModeOptions, usePolicySnapshot } from "../hooks/usePolicy";
 import { usePolicyStore } from "../stores/policyStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
-import {
-  PRODUCT_FEATURES,
-  isInferenceModeEnabled,
-} from "../config/productFeatures.js";
+import { PRODUCT_FEATURES, isInferenceModeEnabled } from "../config/productFeatures.js";
 import WorkspaceSection from "./settings/WorkspaceSection";
 import { enterpriseTileCta, type EnterpriseTileCta } from "../lib/workspaceBilling";
 import WorkspaceBillingOverview from "./settings/WorkspaceBillingOverview";
@@ -909,13 +906,13 @@ type LlmTab =
   | "noteFormatting"
   | "chatIntelligence";
 
-const SPEECH_TABS: SpeechTab[] = (
-  ["dictation", "noteRecording", "upload"] as SpeechTab[]
-).filter((tab) => {
-  if (tab === "noteRecording") return PRODUCT_FEATURES.meetings;
-  if (tab === "upload") return PRODUCT_FEATURES.upload;
-  return true;
-});
+const SPEECH_TABS: SpeechTab[] = (["dictation", "noteRecording", "upload"] as SpeechTab[]).filter(
+  (tab) => {
+    if (tab === "noteRecording") return PRODUCT_FEATURES.meetings;
+    if (tab === "upload") return PRODUCT_FEATURES.upload;
+    return true;
+  }
+);
 const LLM_TABS: LlmTab[] = (
   [
     "dictationCleanup",
@@ -3099,50 +3096,50 @@ export default function SettingsPage({
                   </SettingsRow>
                 </SettingsPanelRow>
                 {PRODUCT_FEATURES.meetings && (
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.notifications.meetingDetection")}
-                    description={t(
-                      "settingsPage.general.notifications.meetingDetectionDescription"
-                    )}
-                  >
-                    <Toggle
-                      checked={notifyMeetingDetection}
-                      onChange={setNotifyMeetingDetection}
-                      disabled={!notificationsEnabled}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.notifications.meetingDetection")}
+                      description={t(
+                        "settingsPage.general.notifications.meetingDetectionDescription"
+                      )}
+                    >
+                      <Toggle
+                        checked={notifyMeetingDetection}
+                        onChange={setNotifyMeetingDetection}
+                        disabled={!notificationsEnabled}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
                 )}
                 {PRODUCT_FEATURES.calendar && (
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.notifications.calendarReminders")}
-                    description={t(
-                      "settingsPage.general.notifications.calendarRemindersDescription"
-                    )}
-                  >
-                    <Toggle
-                      checked={notifyCalendarReminders}
-                      onChange={setNotifyCalendarReminders}
-                      disabled={!notificationsEnabled}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.notifications.calendarReminders")}
+                      description={t(
+                        "settingsPage.general.notifications.calendarRemindersDescription"
+                      )}
+                    >
+                      <Toggle
+                        checked={notifyCalendarReminders}
+                        onChange={setNotifyCalendarReminders}
+                        disabled={!notificationsEnabled}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
                 )}
                 {PRODUCT_FEATURES.appUpdates && (
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.notifications.updates")}
-                    description={t("settingsPage.general.notifications.updatesDescription")}
-                  >
-                    <Toggle
-                      checked={notifyUpdates}
-                      onChange={setNotifyUpdates}
-                      disabled={!notificationsEnabled}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.notifications.updates")}
+                      description={t("settingsPage.general.notifications.updatesDescription")}
+                    >
+                      <Toggle
+                        checked={notifyUpdates}
+                        onChange={setNotifyUpdates}
+                        disabled={!notificationsEnabled}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
                 )}
               </SettingsPanel>
             </div>
@@ -4033,78 +4030,78 @@ EOF`,
 
             {/* Translation Hotkey */}
             {PRODUCT_FEATURES.translationHotkey && (
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.translationHotkey.title")}
-                description={t("settingsPage.general.translationHotkey.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={translationKey}
-                    onChange={(list) => commitAgentHotkey(setTranslationKey, list)}
-                    onClear={() => commitAgentHotkey(setTranslationKey, "")}
-                    validate={validateTranslationHotkey}
-                    disabled={isAgentHotkeyCommitting}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
+              <div>
+                <SectionHeader
+                  title={t("settingsPage.general.translationHotkey.title")}
+                  description={t("settingsPage.general.translationHotkey.description")}
+                />
+                <SettingsPanel>
+                  <SettingsPanelRow>
+                    <HotkeyListInput
+                      value={translationKey}
+                      onChange={(list) => commitAgentHotkey(setTranslationKey, list)}
+                      onClear={() => commitAgentHotkey(setTranslationKey, "")}
+                      validate={validateTranslationHotkey}
+                      disabled={isAgentHotkeyCommitting}
+                      maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                    />
+                  </SettingsPanelRow>
+                </SettingsPanel>
+              </div>
             )}
 
             {/* Meeting Mode Hotkey */}
             {PRODUCT_FEATURES.meetings && (
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.meetingHotkey.title")}
-                description={t("settingsPage.general.meetingHotkey.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={meetingKey}
-                    onChange={(list) => registerMeetingHotkey(list)}
-                    onClear={async () => {
-                      await window.electronAPI?.registerMeetingHotkey?.("");
-                      setMeetingKey("");
-                    }}
-                    validate={validateMeetingHotkey}
-                    disabled={isMeetingHotkeyRegistering}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-                <SettingsPanelRow className="flex items-center justify-between gap-3 border-t border-border/40 dark:border-white/5">
-                  <span className="text-xs text-muted-foreground/80">
-                    {t("settingsPage.general.meetingHotkey.layoutLabel")}
-                  </span>
-                  <Select
-                    value={meetingHotkeyLayoutMode}
-                    onValueChange={(value) =>
-                      setMeetingHotkeyLayoutMode(value as "side-panel" | "full-width")
-                    }
-                  >
-                    <SelectTrigger className="h-7 w-36 text-xs rounded-lg px-2.5 [&>svg]:h-3 [&>svg]:w-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        value="full-width"
-                        className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
-                      >
-                        {t("settingsPage.general.meetingHotkey.layoutFullWidth")}
-                      </SelectItem>
-                      <SelectItem
-                        value="side-panel"
-                        className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
-                      >
-                        {t("settingsPage.general.meetingHotkey.layoutSidePanel")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
+              <div>
+                <SectionHeader
+                  title={t("settingsPage.general.meetingHotkey.title")}
+                  description={t("settingsPage.general.meetingHotkey.description")}
+                />
+                <SettingsPanel>
+                  <SettingsPanelRow>
+                    <HotkeyListInput
+                      value={meetingKey}
+                      onChange={(list) => registerMeetingHotkey(list)}
+                      onClear={async () => {
+                        await window.electronAPI?.registerMeetingHotkey?.("");
+                        setMeetingKey("");
+                      }}
+                      validate={validateMeetingHotkey}
+                      disabled={isMeetingHotkeyRegistering}
+                      maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                    />
+                  </SettingsPanelRow>
+                  <SettingsPanelRow className="flex items-center justify-between gap-3 border-t border-border/40 dark:border-white/5">
+                    <span className="text-xs text-muted-foreground/80">
+                      {t("settingsPage.general.meetingHotkey.layoutLabel")}
+                    </span>
+                    <Select
+                      value={meetingHotkeyLayoutMode}
+                      onValueChange={(value) =>
+                        setMeetingHotkeyLayoutMode(value as "side-panel" | "full-width")
+                      }
+                    >
+                      <SelectTrigger className="h-7 w-36 text-xs rounded-lg px-2.5 [&>svg]:h-3 [&>svg]:w-3">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value="full-width"
+                          className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
+                        >
+                          {t("settingsPage.general.meetingHotkey.layoutFullWidth")}
+                        </SelectItem>
+                        <SelectItem
+                          value="side-panel"
+                          className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
+                        >
+                          {t("settingsPage.general.meetingHotkey.layoutSidePanel")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </SettingsPanelRow>
+                </SettingsPanel>
+              </div>
             )}
           </div>
         );
@@ -4515,141 +4512,141 @@ EOF`,
                 </SettingsPanelRow>
 
                 {PRODUCT_FEATURES.appUpdates ? (
-                <SettingsPanelRow>
-                  <div className="space-y-2.5">
-                    <Button
-                      onClick={async () => {
-                        try {
-                          const result = await checkForUpdates();
-                          if (result && !result.updateAvailable) {
-                            toast({
-                              title: t("settingsPage.general.updates.dialogs.noUpdates.title"),
-                              description: t(
-                                "settingsPage.general.updates.dialogs.noUpdates.description"
-                              ),
-                            });
-                          }
-                        } catch {}
-                      }}
-                      disabled={checkingForUpdates || updateStatus.isDevelopment}
-                      variant="outline"
-                      className="w-full"
-                      size="sm"
-                    >
-                      <RefreshCw
-                        size={13}
-                        className={`mr-1.5 ${checkingForUpdates ? "animate-spin" : ""}`}
-                      />
-                      {checkingForUpdates
-                        ? t("settingsPage.general.updates.checking")
-                        : t("settingsPage.general.updates.checkForUpdates")}
-                    </Button>
-
-                    {isUpdateAvailable && !updateStatus.updateDownloaded && (
-                      <div className="space-y-2">
-                        <Button
-                          onClick={async () => {
-                            try {
-                              await downloadUpdate();
-                            } catch {
-                              showAlertDialog({
-                                title: t(
-                                  "settingsPage.general.updates.dialogs.downloadFailed.title"
-                                ),
+                  <SettingsPanelRow>
+                    <div className="space-y-2.5">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const result = await checkForUpdates();
+                            if (result && !result.updateAvailable) {
+                              toast({
+                                title: t("settingsPage.general.updates.dialogs.noUpdates.title"),
                                 description: t(
-                                  "settingsPage.general.updates.dialogs.downloadFailed.description"
+                                  "settingsPage.general.updates.dialogs.noUpdates.description"
                                 ),
                               });
                             }
-                          }}
-                          disabled={downloadingUpdate}
-                          variant="success"
-                          className="w-full"
-                          size="sm"
-                        >
-                          <Download
-                            size={13}
-                            className={`mr-1.5 ${downloadingUpdate ? "animate-pulse" : ""}`}
-                          />
-                          {downloadingUpdate
-                            ? t("settingsPage.general.updates.downloading", {
-                                progress: Math.round(updateDownloadProgress),
-                              })
-                            : t("settingsPage.general.updates.downloadUpdate", {
-                                version: updateInfo?.version || "",
-                              })}
-                        </Button>
-
-                        {downloadingUpdate && (
-                          <div className="h-1 w-full overflow-hidden rounded-full bg-muted/50">
-                            <div
-                              className="h-full bg-success transition-[width] duration-200 rounded-full"
-                              style={{
-                                width: `${Math.min(100, Math.max(0, updateDownloadProgress))}%`,
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {updateStatus.updateDownloaded && (
-                      <Button
-                        onClick={() => {
-                          showConfirmDialog({
-                            title: t("settingsPage.general.updates.dialogs.installUpdate.title"),
-                            description: t(
-                              "settingsPage.general.updates.dialogs.installUpdate.description",
-                              { version: updateInfo?.version || "" }
-                            ),
-                            confirmText: t(
-                              "settingsPage.general.updates.dialogs.installUpdate.confirmText"
-                            ),
-                            onConfirm: async () => {
-                              try {
-                                await installUpdateAction();
-                              } catch {
-                                showAlertDialog({
-                                  title: t(
-                                    "settingsPage.general.updates.dialogs.installFailed.title"
-                                  ),
-                                  description: t(
-                                    "settingsPage.general.updates.dialogs.installFailed.description"
-                                  ),
-                                });
-                              }
-                            },
-                          });
+                          } catch {}
                         }}
-                        disabled={installInitiated}
+                        disabled={checkingForUpdates || updateStatus.isDevelopment}
+                        variant="outline"
                         className="w-full"
                         size="sm"
                       >
                         <RefreshCw
-                          size={14}
-                          className={`mr-2 ${installInitiated ? "animate-spin" : ""}`}
+                          size={13}
+                          className={`mr-1.5 ${checkingForUpdates ? "animate-spin" : ""}`}
                         />
-                        {installInitiated
-                          ? t("settingsPage.general.updates.restarting")
-                          : t("settingsPage.general.updates.installAndRestart")}
+                        {checkingForUpdates
+                          ? t("settingsPage.general.updates.checking")
+                          : t("settingsPage.general.updates.checkForUpdates")}
                       </Button>
-                    )}
-                  </div>
 
-                  {updateInfo?.releaseNotes && (
-                    <div className="mt-4 pt-4 border-t border-border/30">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                        {t("settingsPage.general.updates.whatsNew", {
-                          version: updateInfo.version,
-                        })}
-                      </p>
-                      <div
-                        className="text-xs text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:space-y-1 [&_li]:pl-1 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_a]:text-link [&_a]:underline"
-                        dangerouslySetInnerHTML={{ __html: updateInfo.releaseNotes }}
-                      />
+                      {isUpdateAvailable && !updateStatus.updateDownloaded && (
+                        <div className="space-y-2">
+                          <Button
+                            onClick={async () => {
+                              try {
+                                await downloadUpdate();
+                              } catch {
+                                showAlertDialog({
+                                  title: t(
+                                    "settingsPage.general.updates.dialogs.downloadFailed.title"
+                                  ),
+                                  description: t(
+                                    "settingsPage.general.updates.dialogs.downloadFailed.description"
+                                  ),
+                                });
+                              }
+                            }}
+                            disabled={downloadingUpdate}
+                            variant="success"
+                            className="w-full"
+                            size="sm"
+                          >
+                            <Download
+                              size={13}
+                              className={`mr-1.5 ${downloadingUpdate ? "animate-pulse" : ""}`}
+                            />
+                            {downloadingUpdate
+                              ? t("settingsPage.general.updates.downloading", {
+                                  progress: Math.round(updateDownloadProgress),
+                                })
+                              : t("settingsPage.general.updates.downloadUpdate", {
+                                  version: updateInfo?.version || "",
+                                })}
+                          </Button>
+
+                          {downloadingUpdate && (
+                            <div className="h-1 w-full overflow-hidden rounded-full bg-muted/50">
+                              <div
+                                className="h-full bg-success transition-[width] duration-200 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, updateDownloadProgress))}%`,
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {updateStatus.updateDownloaded && (
+                        <Button
+                          onClick={() => {
+                            showConfirmDialog({
+                              title: t("settingsPage.general.updates.dialogs.installUpdate.title"),
+                              description: t(
+                                "settingsPage.general.updates.dialogs.installUpdate.description",
+                                { version: updateInfo?.version || "" }
+                              ),
+                              confirmText: t(
+                                "settingsPage.general.updates.dialogs.installUpdate.confirmText"
+                              ),
+                              onConfirm: async () => {
+                                try {
+                                  await installUpdateAction();
+                                } catch {
+                                  showAlertDialog({
+                                    title: t(
+                                      "settingsPage.general.updates.dialogs.installFailed.title"
+                                    ),
+                                    description: t(
+                                      "settingsPage.general.updates.dialogs.installFailed.description"
+                                    ),
+                                  });
+                                }
+                              },
+                            });
+                          }}
+                          disabled={installInitiated}
+                          className="w-full"
+                          size="sm"
+                        >
+                          <RefreshCw
+                            size={14}
+                            className={`mr-2 ${installInitiated ? "animate-spin" : ""}`}
+                          />
+                          {installInitiated
+                            ? t("settingsPage.general.updates.restarting")
+                            : t("settingsPage.general.updates.installAndRestart")}
+                        </Button>
+                      )}
                     </div>
-                  )}
-                </SettingsPanelRow>
+
+                    {updateInfo?.releaseNotes && (
+                      <div className="mt-4 pt-4 border-t border-border/30">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          {t("settingsPage.general.updates.whatsNew", {
+                            version: updateInfo.version,
+                          })}
+                        </p>
+                        <div
+                          className="text-xs text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:space-y-1 [&_li]:pl-1 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_a]:text-link [&_a]:underline"
+                          dangerouslySetInnerHTML={{ __html: updateInfo.releaseNotes }}
+                        />
+                      </div>
+                    )}
+                  </SettingsPanelRow>
                 ) : null}
               </SettingsPanel>
             </div>
