@@ -113,11 +113,7 @@ function MainApp() {
     if (isControlPanel) {
       if (!resolved) {
         setShowOnboarding(true);
-      } else if (
-        PRODUCT_FEATURES.openWhisprAccount &&
-        !isSignedIn &&
-        !authSkipped
-      ) {
+      } else if (PRODUCT_FEATURES.openWhisprAccount && !isSignedIn && !authSkipped) {
         setNeedsReauth(true);
       }
     }

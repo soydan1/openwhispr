@@ -300,6 +300,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
     const handleKeyDown = (e: KeyboardEvent) => {
       const mod = platform === "darwin" ? e.metaKey : e.ctrlKey;
       if (mod && e.key === "k") {
+        if (!PRODUCT_FEATURES.notes) return;
         e.preventDefault();
         setShowSearch(true);
       } else if (mod && e.key === ",") {
@@ -865,15 +866,15 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
     <div className="h-screen bg-background flex flex-col">
       {PRODUCT_FEATURES.meetings && <MeetingRecordingMount />}
       {PRODUCT_FEATURES.meetings && (
-      <MeetingRecordingPill
-        activeView={activeView}
-        activeNoteId={activeNoteId}
-        onReturnToNote={() => {
-          setActiveView("personal-notes");
-          setActiveFolderId(recordingFolderId);
-          setActiveNoteId(recordingNoteId);
-        }}
-      />
+        <MeetingRecordingPill
+          activeView={activeView}
+          activeNoteId={activeNoteId}
+          onReturnToNote={() => {
+            setActiveView("personal-notes");
+            setActiveFolderId(recordingFolderId);
+            setActiveNoteId(recordingNoteId);
+          }}
+        />
       )}
       <ConfirmDialog
         open={confirmDialog.open}
@@ -893,12 +894,12 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
       />
 
       {PRODUCT_FEATURES.openWhisprAccount && (
-      <UpgradePrompt
-        open={showUpgradePrompt}
-        onOpenChange={setShowUpgradePrompt}
-        wordsUsed={limitData?.wordsUsed}
-        limit={limitData?.limit}
-      />
+        <UpgradePrompt
+          open={showUpgradePrompt}
+          onOpenChange={setShowUpgradePrompt}
+          wordsUsed={limitData?.wordsUsed}
+          limit={limitData?.limit}
+        />
       )}
 
       <PostMigrationOnboarding
@@ -927,27 +928,27 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
       )}
 
       {PRODUCT_FEATURES.notes && (
-      <AcceptInvitationModal
-        token={invitationToken}
-        onClose={() => setInvitationToken(null)}
-        onAccepted={(entry) => {
-          setInvitationNotesEntry(entry);
-          setActiveView("personal-notes");
-        }}
-      />
+        <AcceptInvitationModal
+          token={invitationToken}
+          onClose={() => setInvitationToken(null)}
+          onAccepted={(entry) => {
+            setInvitationNotesEntry(entry);
+            setActiveView("personal-notes");
+          }}
+        />
       )}
 
       {PRODUCT_FEATURES.notes && (
-      <JoinYourTeamModal
-        joinable={joinable}
-        domain={user?.email?.split("@")[1] ?? null}
-        onDismiss={dismissJoinable}
-        onRequested={markRequested}
-        onJoined={() => setActiveView("personal-notes")}
-      />
+        <JoinYourTeamModal
+          joinable={joinable}
+          domain={user?.email?.split("@")[1] ?? null}
+          onDismiss={dismissJoinable}
+          onRequested={markRequested}
+          onJoined={() => setActiveView("personal-notes")}
+        />
       )}
 
-      {showSearch && (
+      {PRODUCT_FEATURES.notes && showSearch && (
         <Suspense fallback={null}>
           <CommandSearch
             open={showSearch}
@@ -993,7 +994,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
           <ControlPanelSidebar
             activeView={activeView}
             onViewChange={setActiveView}
-            onOpenSearch={() => setShowSearch(true)}
+            onOpenSearch={PRODUCT_FEATURES.notes ? () => setShowSearch(true) : undefined}
             onOpenSettings={() => {
               setSettingsSection(undefined);
               setShowSettings(true);
