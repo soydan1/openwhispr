@@ -25,6 +25,7 @@ import { getCachedPlatform } from "../utils/platform";
 import type { UpsellDecision } from "../lib/upsell";
 import { isAgentAllowed, isPolicyActionAllowed } from "../stores/policyRules";
 import { usePolicyStore } from "../stores/policyStore";
+import { PRODUCT_FEATURES } from "../config/productFeatures.js";
 
 const platform = getCachedPlatform();
 
@@ -76,8 +77,16 @@ export default function ControlPanelSidebar({
     () => localStorage.getItem("upgradeProDismissed") === "true"
   );
 
-  const showLimitBanner = upsell === "show" && Boolean(isSignedIn) && Boolean(isOverLimit);
-  const showUpgradeBanner = upsell === "show" && !showLimitBanner && !upgradeDismissed;
+  const showLimitBanner =
+    PRODUCT_FEATURES.openWhisprAccount &&
+    upsell === "show" &&
+    Boolean(isSignedIn) &&
+    Boolean(isOverLimit);
+  const showUpgradeBanner =
+    PRODUCT_FEATURES.openWhisprAccount &&
+    upsell === "show" &&
+    !showLimitBanner &&
+    !upgradeDismissed;
 
   const agentAllowed = usePolicyStore(isAgentAllowed);
   const policyActionsAllowed = usePolicyStore((state) => isPolicyActionAllowed(state));
@@ -88,16 +97,22 @@ export default function ControlPanelSidebar({
     icon: React.ComponentType<{ size?: number; className?: string }>;
   }[] = [
     { id: "home", label: t("sidebar.home"), icon: Home },
-    { id: "insights", label: t("sidebar.insights"), icon: BarChart3 },
-    ...(agentAllowed
+    ...(PRODUCT_FEATURES.insights
+      ? [{ id: "insights" as const, label: t("sidebar.insights"), icon: BarChart3 }]
+      : []),
+    ...(PRODUCT_FEATURES.chat && agentAllowed
       ? [{ id: "chat" as const, label: t("sidebar.chat"), icon: MessageSquare }]
       : []),
-    { id: "personal-notes", label: t("sidebar.notes"), icon: NotebookPen },
-    ...(policyActionsAllowed
+    ...(PRODUCT_FEATURES.notes
+      ? [{ id: "personal-notes" as const, label: t("sidebar.notes"), icon: NotebookPen }]
+      : []),
+    ...(PRODUCT_FEATURES.upload && policyActionsAllowed
       ? [{ id: "upload" as const, label: t("sidebar.upload"), icon: Upload }]
       : []),
     { id: "dictionary", label: t("sidebar.dictionary"), icon: BookOpen },
-    { id: "integrations", label: t("sidebar.integrations"), icon: Blocks },
+    ...(PRODUCT_FEATURES.integrations
+      ? [{ id: "integrations" as const, label: t("sidebar.integrations"), icon: Blocks }]
+      : []),
   ];
 
   return (
@@ -245,7 +260,7 @@ export default function ControlPanelSidebar({
           </div>
         )}
 
-        {isSignedIn && onOpenReferrals && (
+        {PRODUCT_FEATURES.referrals && isSignedIn && onOpenReferrals && (
           <button
             onClick={onOpenReferrals}
             aria-label={t("sidebar.referral")}
@@ -274,6 +289,8 @@ export default function ControlPanelSidebar({
           }
         />
 
+        {PRODUCT_FEATURES.openWhisprAccount && (
+          <>
         <div className="mx-1 h-px bg-border/10 dark:bg-white/6 my-1.5!" />
 
         <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md">
@@ -301,6 +318,8 @@ export default function ControlPanelSidebar({
             ) : null}
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

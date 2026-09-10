@@ -8,6 +8,7 @@ import { formatHotkeyLabel, parseHotkeyList } from "../utils/hotkeys";
 import { formatDateGroup } from "../utils/dateFormatting";
 import { useUpcomingEvents } from "../hooks/useUpcomingEvents";
 import UpcomingMeetings from "./UpcomingMeetings";
+import { PRODUCT_FEATURES } from "../config/productFeatures.js";
 import { useSettingsStore } from "../stores/settingsStore";
 import { effectiveLocalHistoryEnabled } from "../stores/policyRules";
 import { usePolicyStore } from "../stores/policyStore";
@@ -295,6 +296,7 @@ export default function HistoryView({
             )}
           </div>
 
+          {PRODUCT_FEATURES.calendar && (
           <div className="w-64 shrink-0 hidden sm:block">
             <div className="sticky top-4">
               <UpcomingMeetings
@@ -305,6 +307,7 @@ export default function HistoryView({
               />
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

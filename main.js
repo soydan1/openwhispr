@@ -306,6 +306,7 @@ const { i18nMain, changeLanguage } = require("./src/helpers/i18nMain");
 const { ensureYdotool } = require("./src/helpers/ensureYdotool");
 const sidecarRegistry = require("./src/helpers/sidecarRegistry");
 const { reapStaleSidecars } = require("./src/helpers/sidecarReaper");
+const PRODUCT_FEATURES = require("./src/config/productFeatures.json");
 
 // Manager instances - initialized after app.whenReady()
 let debugLogger = null;
@@ -615,10 +616,14 @@ function initializeDeferredManagers() {
     });
   }
 
-  googleCalendarManager.start();
-  microsoftCalendarManager.start();
-  appleCalendarManager.start();
-  meetingDetectionEngine.start();
+  if (PRODUCT_FEATURES.calendar) {
+    googleCalendarManager.start();
+    microsoftCalendarManager.start();
+    appleCalendarManager.start();
+  }
+  if (PRODUCT_FEATURES.meetings) {
+    meetingDetectionEngine.start();
+  }
 }
 
 app.on("open-url", (event, url) => {
@@ -1096,7 +1101,9 @@ async function startApp() {
   };
   windowManager._voiceAgentHotkeyCallback = voiceAgentHotkeyCallback;
 
-  const savedVoiceAgentKey = environmentManager.getVoiceAgentKey?.() || "";
+  const savedVoiceAgentKey = PRODUCT_FEATURES.assistant
+    ? environmentManager.getVoiceAgentKey?.() || ""
+    : "";
   if (savedVoiceAgentKey) {
     const result = await hotkeyManager.registerSlot(
       "voiceAgent",
@@ -1119,7 +1126,9 @@ async function startApp() {
   };
   windowManager._translationHotkeyCallback = translationHotkeyCallback;
 
-  const savedTranslationKey = environmentManager.getTranslationKey?.() || "";
+  const savedTranslationKey = PRODUCT_FEATURES.translationHotkey
+    ? environmentManager.getTranslationKey?.() || ""
+    : "";
   if (savedTranslationKey) {
     const result = await hotkeyManager.registerSlot(
       "translation",
@@ -1144,7 +1153,9 @@ async function startApp() {
     meetingDetectionEngine?.startManualMeeting();
   };
 
-  const savedMeetingKey = environmentManager.getMeetingKey?.() || "";
+  const savedMeetingKey = PRODUCT_FEATURES.meetings
+    ? environmentManager.getMeetingKey?.() || ""
+    : "";
   if (savedMeetingKey) {
     const result = await hotkeyManager.registerSlot(
       "meeting",
@@ -1181,6 +1192,7 @@ async function startApp() {
   initializeDeferredManagers();
 
   app.on("browser-window-focus", () => {
+    if (!PRODUCT_FEATURES.calendar) return;
     if (googleCalendarManager) googleCalendarManager.syncOnFocus();
     if (microsoftCalendarManager) microsoftCalendarManager.syncOnFocus();
     if (appleCalendarManager) appleCalendarManager.syncOnFocus();
@@ -1188,12 +1200,14 @@ async function startApp() {
 
   const { powerMonitor } = require("electron");
   powerMonitor.on("resume", () => {
-    if (calendarReminderScheduler) calendarReminderScheduler.onWakeFromSleep();
-    if (googleCalendarManager) {
-      googleCalendarManager.onWakeFromSleep();
+    if (PRODUCT_FEATURES.calendar) {
+      if (calendarReminderScheduler) calendarReminderScheduler.onWakeFromSleep();
+      if (googleCalendarManager) {
+        googleCalendarManager.onWakeFromSleep();
+      }
+      if (microsoftCalendarManager) microsoftCalendarManager.onWakeFromSleep();
+      if (appleCalendarManager) appleCalendarManager.onWakeFromSleep();
     }
-    if (microsoftCalendarManager) microsoftCalendarManager.onWakeFromSleep();
-    if (appleCalendarManager) appleCalendarManager.onWakeFromSleep();
     // Sleep evicts the local GPU model from VRAM; reload it once the driver settles. See #766.
     if (wakeRewarmTimer) clearTimeout(wakeRewarmTimer);
     wakeRewarmTimer = setTimeout(() => {
@@ -1247,6 +1261,7 @@ async function startApp() {
 
   // Auto-download diarization models if binary is available
   if (
+    PRODUCT_FEATURES.meetings &&
     diarizationManager.getBinaryPath() &&
     (!diarizationManager.isModelDownloaded() || !diarizationManager.isVadModelDownloaded())
   ) {
@@ -1278,7 +1293,10 @@ async function startApp() {
   // A successful unhealthy-restart can bring the sidecar back on a new port.
   qdrantManager.on("restarted", wireVectorIndex);
   sidecarRegistry.register("qdrant", () => qdrantManager.stop());
-  if (qdrantManager.isAvailable()) {
+  if (
+    (PRODUCT_FEATURES.notes || PRODUCT_FEATURES.assistant || PRODUCT_FEATURES.chat) &&
+    qdrantManager.isAvailable()
+  ) {
     qdrantManager
       .start()
       .then(() => {
@@ -1290,7 +1308,10 @@ async function startApp() {
   }
 
   const localEmbeddings = require("./src/helpers/localEmbeddings");
-  if (!localEmbeddings.isAvailable()) {
+  if (
+    (PRODUCT_FEATURES.notes || PRODUCT_FEATURES.assistant || PRODUCT_FEATURES.chat) &&
+    !localEmbeddings.isAvailable()
+  ) {
     localEmbeddings.downloadModel().catch((err) => {
       debugLogger.debug("Embedding model download error (non-fatal)", { error: err.message });
     });

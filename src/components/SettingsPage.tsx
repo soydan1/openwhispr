@@ -144,6 +144,10 @@ import {
 import { usePolicyModeOptions, usePolicySnapshot } from "../hooks/usePolicy";
 import { usePolicyStore } from "../stores/policyStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
+import {
+  PRODUCT_FEATURES,
+  isInferenceModeEnabled,
+} from "../config/productFeatures.js";
 import WorkspaceSection from "./settings/WorkspaceSection";
 import { enterpriseTileCta, type EnterpriseTileCta } from "../lib/workspaceBilling";
 import WorkspaceBillingOverview from "./settings/WorkspaceBillingOverview";
@@ -602,7 +606,7 @@ function TranscriptionSection({
             },
           ]
         : []),
-    ],
+    ].filter((mode) => isInferenceModeEnabled(mode.id)) as InferenceModeOption[],
     "transcription",
     transcriptionMode,
     {
@@ -905,14 +909,27 @@ type LlmTab =
   | "noteFormatting"
   | "chatIntelligence";
 
-const SPEECH_TABS: SpeechTab[] = ["dictation", "noteRecording", "upload"];
-const LLM_TABS: LlmTab[] = [
-  "dictationCleanup",
-  "dictationAgent",
-  "dictationTranslation",
-  "noteFormatting",
-  "chatIntelligence",
-];
+const SPEECH_TABS: SpeechTab[] = (
+  ["dictation", "noteRecording", "upload"] as SpeechTab[]
+).filter((tab) => {
+  if (tab === "noteRecording") return PRODUCT_FEATURES.meetings;
+  if (tab === "upload") return PRODUCT_FEATURES.upload;
+  return true;
+});
+const LLM_TABS: LlmTab[] = (
+  [
+    "dictationCleanup",
+    "dictationAgent",
+    "dictationTranslation",
+    "noteFormatting",
+    "chatIntelligence",
+  ] as LlmTab[]
+).filter((tab) => {
+  if (tab === "dictationAgent" || tab === "chatIntelligence") return PRODUCT_FEATURES.assistant;
+  if (tab === "dictationTranslation") return PRODUCT_FEATURES.translationHotkey;
+  if (tab === "noteFormatting") return PRODUCT_FEATURES.notes;
+  return true;
+});
 const AGENT_LLM_TABS = new Set<LlmTab>(["dictationAgent", "chatIntelligence"]);
 
 function useSubTab<T extends string>(storageKey: string, options: readonly T[], initial?: T) {
@@ -1007,7 +1024,7 @@ function SpeechToTextTabs({
     { id: "dictation", name: t("settingsPage.speechToText.tabs.dictation") },
     { id: "noteRecording", name: t("settingsPage.speechToText.tabs.noteRecording") },
     { id: "upload", name: t("settingsPage.speechToText.tabs.upload") },
-  ];
+  ].filter((item) => SPEECH_TABS.includes(item.id as SpeechTab));
 
   return (
     <div className="space-y-4">
@@ -3081,6 +3098,7 @@ export default function SettingsPage({
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
+                {PRODUCT_FEATURES.meetings && (
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("settingsPage.general.notifications.meetingDetection")}
@@ -3095,6 +3113,8 @@ export default function SettingsPage({
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
+                )}
+                {PRODUCT_FEATURES.calendar && (
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("settingsPage.general.notifications.calendarReminders")}
@@ -3109,6 +3129,8 @@ export default function SettingsPage({
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
+                )}
+                {PRODUCT_FEATURES.appUpdates && (
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("settingsPage.general.notifications.updates")}
@@ -3121,6 +3143,7 @@ export default function SettingsPage({
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
+                )}
               </SettingsPanel>
             </div>
 
@@ -3987,7 +4010,7 @@ EOF`,
             </div>
 
             {/* Voice Agent Hotkey */}
-            {agentAllowedByPolicy && (
+            {PRODUCT_FEATURES.assistant && agentAllowedByPolicy && (
               <div>
                 <SectionHeader
                   title={t("settingsPage.general.voiceAgentHotkey.title")}
@@ -4009,6 +4032,7 @@ EOF`,
             )}
 
             {/* Translation Hotkey */}
+            {PRODUCT_FEATURES.translationHotkey && (
             <div>
               <SectionHeader
                 title={t("settingsPage.general.translationHotkey.title")}
@@ -4027,8 +4051,10 @@ EOF`,
                 </SettingsPanelRow>
               </SettingsPanel>
             </div>
+            )}
 
             {/* Meeting Mode Hotkey */}
+            {PRODUCT_FEATURES.meetings && (
             <div>
               <SectionHeader
                 title={t("settingsPage.general.meetingHotkey.title")}
@@ -4079,6 +4105,7 @@ EOF`,
                 </SettingsPanelRow>
               </SettingsPanel>
             </div>
+            )}
           </div>
         );
 
@@ -4487,6 +4514,7 @@ EOF`,
                   </SettingsRow>
                 </SettingsPanelRow>
 
+                {PRODUCT_FEATURES.appUpdates ? (
                 <SettingsPanelRow>
                   <div className="space-y-2.5">
                     <Button
@@ -4622,6 +4650,7 @@ EOF`,
                     </div>
                   )}
                 </SettingsPanelRow>
+                ) : null}
               </SettingsPanel>
             </div>
 

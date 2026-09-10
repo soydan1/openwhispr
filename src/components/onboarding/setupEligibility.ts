@@ -4,6 +4,7 @@ import {
   isProviderAllowedByPolicy,
   type PolicyDecisionSnapshot,
 } from "../../stores/policyRules.ts";
+import { PRODUCT_FEATURES } from "../../config/productFeatures.js";
 
 interface ProviderOption {
   id: string;
@@ -40,6 +41,7 @@ export function getOnboardingSetupAvailability({
     filterByokProviderOptionsByPolicy(llmProviders, "llm", policy).length > 0;
 
   const cloud =
+    PRODUCT_FEATURES.openWhisprCloud &&
     isModeAllowedByPolicy(policy, "transcription", "openwhispr") &&
     (!agentAllowed || isModeAllowedByPolicy(policy, "llm", "openwhispr"));
   const local =

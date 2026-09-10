@@ -15,6 +15,7 @@ import {
 import SidebarModal, { type SidebarItem } from "./ui/SidebarModal";
 import SettingsPage, { AccountAvatar, SettingsSectionType } from "./SettingsPage";
 import { useAuth } from "../hooks/useAuth";
+import { PRODUCT_FEATURES } from "../config/productFeatures.js";
 
 export type { SettingsSectionType };
 
@@ -126,12 +127,26 @@ export default function SettingsModal({ open, onOpenChange, initialSection }: Se
         group: t("settingsModal.groups.system"),
       },
     ];
-    return isSignedIn ? items : items.filter((item) => item.id !== "workspace");
+    const visible = items.filter((item) => {
+      if (item.id === "account" || item.id === "plansBilling" || item.id === "workspace") {
+        return PRODUCT_FEATURES.openWhisprAccount;
+      }
+      return true;
+    });
+    return isSignedIn ? visible : visible.filter((item) => item.id !== "workspace");
   }, [t, isSignedIn]);
 
   const resolveSection = (section: string | undefined): SettingsSectionType => {
-    if (!section) return "account";
-    return (SECTION_ALIASES[section] ?? section) as SettingsSectionType;
+    const fallback = PRODUCT_FEATURES.openWhisprAccount ? "account" : "general";
+    if (!section) return fallback;
+    const resolved = (SECTION_ALIASES[section] ?? section) as SettingsSectionType;
+    if (
+      !PRODUCT_FEATURES.openWhisprAccount &&
+      (resolved === "account" || resolved === "plansBilling" || resolved === "workspace")
+    ) {
+      return fallback;
+    }
+    return resolved;
   };
 
   const [activeSection, setActiveSection] = React.useState<SettingsSectionType>(() =>

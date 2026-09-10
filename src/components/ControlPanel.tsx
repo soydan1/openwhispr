@@ -78,6 +78,7 @@ import {
 import { applyChineseScript, resolveChineseScriptTarget } from "../utils/chineseScript";
 import HistoryView from "./HistoryView";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
+import { PRODUCT_FEATURES } from "../config/productFeatures.js";
 import SpaceSyncToastListener from "./notes/SpaceSyncToastListener";
 import { syncService } from "../services/SyncService.js";
 import logger from "../utils/logger";
@@ -398,6 +399,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
   }, [authLoaded, isSignedIn]);
 
   useEffect(() => {
+    if (!PRODUCT_FEATURES.meetings) return;
     const drain = async () => {
       const data = await window.electronAPI?.getPendingMeetingNoteNavigation?.();
       if (!data) return;
@@ -423,6 +425,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
   }, []);
 
   useEffect(() => {
+    if (!PRODUCT_FEATURES.notes) return;
     const drain = async () => {
       const data = await window.electronAPI?.getPendingNoteNavigation?.();
       if (!data) return;
@@ -463,6 +466,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
   }, [toast, t]);
 
   useEffect(() => {
+    if (!PRODUCT_FEATURES.meetings && !PRODUCT_FEATURES.notes) return;
     fetchStreamingProviders();
   }, []);
 
@@ -859,7 +863,8 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
 
   return (
     <div className="h-screen bg-background flex flex-col">
-      <MeetingRecordingMount />
+      {PRODUCT_FEATURES.meetings && <MeetingRecordingMount />}
+      {PRODUCT_FEATURES.meetings && (
       <MeetingRecordingPill
         activeView={activeView}
         activeNoteId={activeNoteId}
@@ -869,6 +874,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
           setActiveNoteId(recordingNoteId);
         }}
       />
+      )}
       <ConfirmDialog
         open={confirmDialog.open}
         onOpenChange={hideConfirmDialog}
@@ -886,12 +892,14 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
         onOk={() => {}}
       />
 
+      {PRODUCT_FEATURES.openWhisprAccount && (
       <UpgradePrompt
         open={showUpgradePrompt}
         onOpenChange={setShowUpgradePrompt}
         wordsUsed={limitData?.wordsUsed}
         limit={limitData?.limit}
       />
+      )}
 
       <PostMigrationOnboarding
         open={showPostMigration}
@@ -912,12 +920,13 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
         </Suspense>
       )}
 
-      {showReferrals && (
+      {PRODUCT_FEATURES.referrals && showReferrals && (
         <Suspense fallback={null}>
           <ReferralModal open={showReferrals} onOpenChange={setShowReferrals} />
         </Suspense>
       )}
 
+      {PRODUCT_FEATURES.notes && (
       <AcceptInvitationModal
         token={invitationToken}
         onClose={() => setInvitationToken(null)}
@@ -926,7 +935,9 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
           setActiveView("personal-notes");
         }}
       />
+      )}
 
+      {PRODUCT_FEATURES.notes && (
       <JoinYourTeamModal
         joinable={joinable}
         domain={user?.email?.split("@")[1] ?? null}
@@ -934,6 +945,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
         onRequested={markRequested}
         onJoined={() => setActiveView("personal-notes")}
       />
+      )}
 
       {showSearch && (
         <Suspense fallback={null}>
@@ -999,6 +1011,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
             authLoaded={authLoaded}
             upsell={upsell}
             updateAction={
+              PRODUCT_FEATURES.appUpdates &&
               !updateStatus.isDevelopment &&
               (updateStatus.updateAvailable ||
                 updateStatus.updateDownloaded ||

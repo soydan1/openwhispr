@@ -28,6 +28,7 @@ import { ActiveMicRecoveryController } from "./activeMicRecovery";
 import { followsSystemDefaultMic } from "./micSelectionRecovery";
 import { isCacheableMicrophoneResolution, resolvePreferredMicrophone } from "./microphoneSelection";
 import { isStaleDeviceError } from "./staleMicDevice";
+import { PRODUCT_FEATURES } from "../config/productFeatures.js";
 import { shouldSaveDiscardedRecording } from "./discardedRecording";
 import {
   ANALYTICS_COUNTER_VERSION,
@@ -1882,7 +1883,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const cloudTranscriptionMode = settings.cloudTranscriptionMode;
       const isSignedIn = settings.isSignedIn;
 
-      const isOpenWhisprCloudMode = !useLocalWhisper && cloudTranscriptionMode === "openwhispr";
+      const isOpenWhisprCloudMode =
+        PRODUCT_FEATURES.openWhisprCloud &&
+        !useLocalWhisper &&
+        cloudTranscriptionMode === "openwhispr";
       const useCloud = isOpenWhisprCloudMode && isSignedIn;
       logger.debug(
         "Transcription routing",
