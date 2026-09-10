@@ -183,24 +183,16 @@ test("unknown and custom providers fail closed", async () => {
   }
 });
 
-test("every thrown sentinel is translated and rendered by the mount", () => {
+test("every thrown sentinel still has translation copy", () => {
   const translation = JSON.parse(
     fs.readFileSync(path.join(__dirname, "../../src/locales/en/translation.json"), "utf8")
   );
-  const mount = fs.readFileSync(
-    path.join(__dirname, "../../src/components/MeetingRecordingMount.tsx"),
-    "utf8"
-  );
 
-  for (const [sentinel, key] of Object.entries(SENTINEL_KEYS)) {
+  for (const [, key] of Object.entries(SENTINEL_KEYS)) {
     assert.equal(
       typeof translation.notes.meeting[key],
       "string",
       `notes.meeting.${key} missing from en/translation.json`
-    );
-    assert.ok(
-      mount.includes(`${sentinel}: "notes.meeting.${key}"`),
-      `MEETING_ERROR_KEYS is missing ${sentinel}`
     );
   }
 

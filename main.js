@@ -1272,49 +1272,45 @@ async function startApp() {
     });
   }
 
-  const QdrantManager = require("./src/helpers/qdrantManager");
-  qdrantManager = new QdrantManager();
-  // Must not throw: this also runs inside the unhealthy-restart path, whose
-  // catch would stop the replacement sidecar.
-  const wireVectorIndex = (port) => {
-    try {
-      const vectorIndex = require("./src/helpers/vectorIndex");
-      vectorIndex.init(port);
-      vectorIndex
-        .ensureCollection()
-        .then(() => ipcHandlers?.drainPendingVectorPurges())
+  if (PRODUCT_FEATURES.notes || PRODUCT_FEATURES.assistant || PRODUCT_FEATURES.chat) {
+    const QdrantManager = require("./src/helpers/qdrantManager");
+    qdrantManager = new QdrantManager();
+    // Must not throw: this also runs inside the unhealthy-restart path, whose
+    // catch would stop the replacement sidecar.
+    const wireVectorIndex = (port) => {
+      try {
+        const vectorIndex = require("./src/helpers/vectorIndex");
+        vectorIndex.init(port);
+        vectorIndex
+          .ensureCollection()
+          .then(() => ipcHandlers?.drainPendingVectorPurges())
+          .catch((err) => {
+            debugLogger.debug("Qdrant collection setup error (non-fatal)", { error: err.message });
+          });
+      } catch (err) {
+        debugLogger.debug("Qdrant rewire error (non-fatal)", { error: err.message });
+      }
+    };
+    // A successful unhealthy-restart can bring the sidecar back on a new port.
+    qdrantManager.on("restarted", wireVectorIndex);
+    sidecarRegistry.register("qdrant", () => qdrantManager.stop());
+    if (qdrantManager.isAvailable()) {
+      qdrantManager
+        .start()
+        .then(() => {
+          if (qdrantManager.isReady()) wireVectorIndex(qdrantManager.getPort());
+        })
         .catch((err) => {
-          debugLogger.debug("Qdrant collection setup error (non-fatal)", { error: err.message });
+          debugLogger.debug("Qdrant startup error (non-fatal)", { error: err.message });
         });
-    } catch (err) {
-      debugLogger.debug("Qdrant rewire error (non-fatal)", { error: err.message });
     }
-  };
-  // A successful unhealthy-restart can bring the sidecar back on a new port.
-  qdrantManager.on("restarted", wireVectorIndex);
-  sidecarRegistry.register("qdrant", () => qdrantManager.stop());
-  if (
-    (PRODUCT_FEATURES.notes || PRODUCT_FEATURES.assistant || PRODUCT_FEATURES.chat) &&
-    qdrantManager.isAvailable()
-  ) {
-    qdrantManager
-      .start()
-      .then(() => {
-        if (qdrantManager.isReady()) wireVectorIndex(qdrantManager.getPort());
-      })
-      .catch((err) => {
-        debugLogger.debug("Qdrant startup error (non-fatal)", { error: err.message });
-      });
-  }
 
-  const localEmbeddings = require("./src/helpers/localEmbeddings");
-  if (
-    (PRODUCT_FEATURES.notes || PRODUCT_FEATURES.assistant || PRODUCT_FEATURES.chat) &&
-    !localEmbeddings.isAvailable()
-  ) {
-    localEmbeddings.downloadModel().catch((err) => {
-      debugLogger.debug("Embedding model download error (non-fatal)", { error: err.message });
-    });
+    const localEmbeddings = require("./src/helpers/localEmbeddings");
+    if (!localEmbeddings.isAvailable()) {
+      localEmbeddings.downloadModel().catch((err) => {
+        debugLogger.debug("Embedding model download error (non-fatal)", { error: err.message });
+      });
+    }
   }
 
   if (process.platform === "win32") {

@@ -2,7 +2,6 @@ import React, { Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import App from "./App.jsx";
 import AgentDictationPillOverlay from "./components/dictation/AgentDictationPillOverlay.tsx";
-import MeetingNotificationOverlay from "./components/MeetingNotificationOverlay.tsx";
 import ReauthenticationScreen from "./components/ReauthenticationScreen.tsx";
 import UpdateNotificationOverlay from "./components/UpdateNotificationOverlay.tsx";
 import BackgroundModelDownloadTray from "./components/onboarding/BackgroundModelDownloadTray.tsx";
@@ -28,10 +27,6 @@ const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"
 export default function AppRouter() {
   useTheme();
   const params = window.location.search;
-
-  if (params.includes("meeting-notification=true")) {
-    return <MeetingNotificationOverlay />;
-  }
 
   if (params.includes("update-notification=true")) {
     return <UpdateNotificationOverlay />;

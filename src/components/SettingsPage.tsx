@@ -88,12 +88,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import LinuxPttSetupInfo from "./ui/LinuxPttSetupInfo";
 import { Toggle } from "./ui/toggle";
 import DeveloperSection from "./DeveloperSection";
-import ChatAgentSettings from "./settings/ChatAgentSettings";
-import DictationAgentSettings from "./settings/DictationAgentSettings";
-import DictationTranslationSettings from "./settings/DictationTranslationSettings";
 import InferenceConfigEditor from "./settings/InferenceConfigEditor";
-import { MeetingTranscriptionPanel } from "./settings/MeetingSettings";
-import { UploadTranscriptionPanel } from "./settings/UploadSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import { Skeleton } from "./ui/skeleton";
 import { Progress } from "./ui/progress";
@@ -840,28 +835,6 @@ const CLEANUP_MODE_TOAST_KEY: Record<InferenceMode, string> = {
   enterprise: "switchedEnterprise",
 };
 
-function NoteFormattingSettings() {
-  const { t } = useTranslation();
-  const autoGenerateNoteTitle = useSettingsStore((s) => s.autoGenerateNoteTitle);
-  const setAutoGenerateNoteTitle = useSettingsStore((s) => s.setAutoGenerateNoteTitle);
-
-  return (
-    <div className="space-y-4">
-      <SettingsPanel>
-        <SettingsPanelRow>
-          <SettingsRow
-            label={t("settingsPage.noteFormatting.autoGenerateTitle")}
-            description={t("settingsPage.noteFormatting.autoGenerateTitleDescription")}
-          >
-            <Toggle checked={autoGenerateNoteTitle} onChange={setAutoGenerateNoteTitle} />
-          </SettingsRow>
-        </SettingsPanelRow>
-      </SettingsPanel>
-      <InferenceConfigEditor scope="noteFormatting" />
-    </div>
-  );
-}
-
 function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModelsSectionProps) {
   const { t } = useTranslation();
 
@@ -1011,8 +984,8 @@ function SpeechToTextTabs({
 }: {
   initialTab?: SpeechTab;
   renderDictation: () => React.ReactNode;
-  renderNoteRecording: () => React.ReactNode;
-  renderUpload: () => React.ReactNode;
+  renderNoteRecording?: () => React.ReactNode;
+  renderUpload?: () => React.ReactNode;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useSubTab<SpeechTab>("settings.speechToTextTab", SPEECH_TABS, initialTab);
@@ -1029,23 +1002,27 @@ function SpeechToTextTabs({
         title={t("settingsPage.speechToText.title")}
         description={t("settingsPage.speechToText.description")}
       />
-      <ProviderTabs
-        providers={subTabs}
-        selectedId={tab}
-        onSelect={(id) => setTab(id as SpeechTab)}
-        renderIcon={(id) =>
-          id === "dictation" ? (
-            <Mic className="w-3.5 h-3.5" />
-          ) : id === "upload" ? (
-            <Upload className="w-3.5 h-3.5" />
-          ) : (
-            <FileAudio className="w-3.5 h-3.5" />
-          )
-        }
-      />
+      {subTabs.length > 1 && (
+        <ProviderTabs
+          providers={subTabs}
+          selectedId={tab}
+          onSelect={(id) => setTab(id as SpeechTab)}
+          renderIcon={(id) =>
+            id === "dictation" ? (
+              <Mic className="w-3.5 h-3.5" />
+            ) : id === "upload" ? (
+              <Upload className="w-3.5 h-3.5" />
+            ) : (
+              <FileAudio className="w-3.5 h-3.5" />
+            )
+          }
+        />
+      )}
       <TabPanel active={tab === "dictation"}>{renderDictation()}</TabPanel>
-      <TabPanel active={tab === "noteRecording"}>{renderNoteRecording()}</TabPanel>
-      <TabPanel active={tab === "upload"}>{renderUpload()}</TabPanel>
+      {renderNoteRecording && (
+        <TabPanel active={tab === "noteRecording"}>{renderNoteRecording()}</TabPanel>
+      )}
+      {renderUpload && <TabPanel active={tab === "upload"}>{renderUpload()}</TabPanel>}
     </div>
   );
 }
@@ -1060,10 +1037,10 @@ function LlmsTabs({
 }: {
   initialTab?: LlmTab;
   renderDictationCleanup: () => React.ReactNode;
-  renderDictationAgent: () => React.ReactNode;
-  renderDictationTranslation: () => React.ReactNode;
-  renderNoteFormatting: () => React.ReactNode;
-  renderChatIntelligence: () => React.ReactNode;
+  renderDictationAgent?: () => React.ReactNode;
+  renderDictationTranslation?: () => React.ReactNode;
+  renderNoteFormatting?: () => React.ReactNode;
+  renderChatIntelligence?: () => React.ReactNode;
 }) {
   const { t } = useTranslation();
   const agentAllowed = usePolicyStore(isAgentAllowed);
@@ -1086,25 +1063,31 @@ function LlmsTabs({
         title={t("settingsPage.llms.title")}
         description={t("settingsPage.llms.description")}
       />
-      <ProviderTabs
-        providers={subTabs}
-        selectedId={tab}
-        onSelect={(id) => setTab(id as LlmTab)}
-        renderIcon={(id) => {
-          if (id === "dictationCleanup") return <Wand2 className="w-3.5 h-3.5" />;
-          if (id === "dictationAgent") return <Sparkles className="w-3.5 h-3.5" />;
-          if (id === "dictationTranslation") return <Languages className="w-3.5 h-3.5" />;
-          if (id === "noteFormatting") return <BookOpen className="w-3.5 h-3.5" />;
-          return <MessageSquare className="w-3.5 h-3.5" />;
-        }}
-      />
+      {subTabs.length > 1 && (
+        <ProviderTabs
+          providers={subTabs}
+          selectedId={tab}
+          onSelect={(id) => setTab(id as LlmTab)}
+          renderIcon={(id) => {
+            if (id === "dictationCleanup") return <Wand2 className="w-3.5 h-3.5" />;
+            if (id === "dictationAgent") return <Sparkles className="w-3.5 h-3.5" />;
+            if (id === "dictationTranslation") return <Languages className="w-3.5 h-3.5" />;
+            if (id === "noteFormatting") return <BookOpen className="w-3.5 h-3.5" />;
+            return <MessageSquare className="w-3.5 h-3.5" />;
+          }}
+        />
+      )}
       <TabPanel active={tab === "dictationCleanup"}>{renderDictationCleanup()}</TabPanel>
-      {agentAllowed && (
+      {agentAllowed && renderDictationAgent && (
         <TabPanel active={tab === "dictationAgent"}>{renderDictationAgent()}</TabPanel>
       )}
-      <TabPanel active={tab === "dictationTranslation"}>{renderDictationTranslation()}</TabPanel>
-      <TabPanel active={tab === "noteFormatting"}>{renderNoteFormatting()}</TabPanel>
-      {agentAllowed && (
+      {renderDictationTranslation && (
+        <TabPanel active={tab === "dictationTranslation"}>{renderDictationTranslation()}</TabPanel>
+      )}
+      {renderNoteFormatting && (
+        <TabPanel active={tab === "noteFormatting"}>{renderNoteFormatting()}</TabPanel>
+      )}
+      {agentAllowed && renderChatIntelligence && (
         <TabPanel active={tab === "chatIntelligence"}>{renderChatIntelligence()}</TabPanel>
       )}
     </div>
@@ -3171,61 +3154,63 @@ export default function SettingsPage({
             </div>
 
             {/* Save Notes as Files */}
-            <div>
-              <SectionHeader title={t("settings.noteFiles.title")} />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settings.noteFiles.title")}
-                    description={t("settings.noteFiles.description")}
-                  >
-                    <Toggle checked={noteFilesEnabled} onChange={handleNoteFilesToggle} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                {noteFilesEnabled && (
-                  <>
-                    <SettingsPanelRow>
-                      <SettingsRow
-                        label={t("settings.noteFiles.path")}
-                        description={noteFilesPath || noteFilesDefaultPath || "..."}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={handleNoteFilesChangePath}
+            {PRODUCT_FEATURES.notes && (
+              <div>
+                <SectionHeader title={t("settings.noteFiles.title")} />
+                <SettingsPanel>
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settings.noteFiles.title")}
+                      description={t("settings.noteFiles.description")}
+                    >
+                      <Toggle checked={noteFilesEnabled} onChange={handleNoteFilesToggle} />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                  {noteFilesEnabled && (
+                    <>
+                      <SettingsPanelRow>
+                        <SettingsRow
+                          label={t("settings.noteFiles.path")}
+                          description={noteFilesPath || noteFilesDefaultPath || "..."}
                         >
-                          {t("settings.noteFiles.changePath")}
-                        </Button>
-                      </SettingsRow>
-                    </SettingsPanelRow>
-                    <SettingsPanelRow>
-                      <SettingsRow
-                        label={t("settings.noteFiles.rebuild")}
-                        description={t("settings.noteFiles.rebuildDescription")}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          disabled={noteFilesRebuilding}
-                          onClick={handleNoteFilesRebuild}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={handleNoteFilesChangePath}
+                          >
+                            {t("settings.noteFiles.changePath")}
+                          </Button>
+                        </SettingsRow>
+                      </SettingsPanelRow>
+                      <SettingsPanelRow>
+                        <SettingsRow
+                          label={t("settings.noteFiles.rebuild")}
+                          description={t("settings.noteFiles.rebuildDescription")}
                         >
-                          {noteFilesRebuilding ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            t("settings.noteFiles.rebuild")
-                          )}
-                        </Button>
-                      </SettingsRow>
-                    </SettingsPanelRow>
-                  </>
-                )}
-              </SettingsPanel>
-            </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={noteFilesRebuilding}
+                            onClick={handleNoteFilesRebuild}
+                          >
+                            {noteFilesRebuilding ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              t("settings.noteFiles.rebuild")
+                            )}
+                          </Button>
+                        </SettingsRow>
+                      </SettingsPanelRow>
+                    </>
+                  )}
+                </SettingsPanel>
+              </div>
+            )}
 
             {/* Import from Granola */}
-            <GranolaImportSection showAlertDialog={showAlertDialog} />
+            {PRODUCT_FEATURES.notes && <GranolaImportSection showAlertDialog={showAlertDialog} />}
 
             {/* Floating Icon */}
             <div>
@@ -4859,19 +4844,6 @@ EOF`,
                   renderWhisperVadSettings()}
               </div>
             )}
-            renderNoteRecording={() => (
-              <div className="space-y-6">
-                <MeetingTranscriptionPanel />
-                {transcriptionMode === "local" &&
-                  localTranscriptionProvider === "whisper" &&
-                  renderWhisperVadSettings()}
-              </div>
-            )}
-            renderUpload={() => (
-              <div className="space-y-6">
-                <UploadTranscriptionPanel />
-              </div>
-            )}
           />
         </TabPanel>
       )}
@@ -4881,7 +4853,6 @@ EOF`,
             initialTab={
               activeSection === "llms" ? (initialSubTab as LlmTab | undefined) : undefined
             }
-            renderChatIntelligence={() => <ChatAgentSettings />}
             renderDictationCleanup={() => (
               <div className="space-y-6">
                 <AiModelsSection
@@ -4900,9 +4871,6 @@ EOF`,
                 </div>
               </div>
             )}
-            renderDictationAgent={() => <DictationAgentSettings />}
-            renderDictationTranslation={() => <DictationTranslationSettings />}
-            renderNoteFormatting={() => <NoteFormattingSettings />}
           />
         </TabPanel>
       )}
