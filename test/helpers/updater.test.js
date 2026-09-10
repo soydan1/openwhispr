@@ -15,8 +15,11 @@ function makeAutoUpdater({ offline = false } = {}) {
   const listeners = {};
   const autoUpdater = {
     calls: 0,
+    feedCalls: 0,
     listeners,
-    setFeedURL() {},
+    setFeedURL() {
+      autoUpdater.feedCalls += 1;
+    },
     on(event, handler) {
       listeners[event] = handler;
     },
@@ -86,7 +89,7 @@ test("with App updates off, startup and periodic checks never reach the update f
   manager.cleanup();
 });
 
-test("with App updates on, startup and periodic checks run as before", (t) => {
+test("this fork never points electron-updater at OpenWhispr releases", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
   const autoUpdater = makeAutoUpdater();
   const manager = createUpdateManager(autoUpdater);
@@ -94,16 +97,17 @@ test("with App updates on, startup and periodic checks run as before", (t) => {
     notificationPrefs: { notificationsEnabled: true, notifyUpdates: true },
   });
 
+  assert.equal(autoUpdater.feedCalls, 0, "setFeedURL must not run");
   manager.checkForUpdatesOnStartup();
   t.mock.timers.tick(STARTUP_DELAY_MS);
-  assert.equal(autoUpdater.calls, 1);
+  assert.equal(autoUpdater.calls, 0, "startup check must not reach the feed");
   t.mock.timers.tick(PERIODIC_INTERVAL_MS);
-  assert.equal(autoUpdater.calls, 2);
+  assert.equal(autoUpdater.calls, 0, "periodic check must not reach the feed");
 
   manager.cleanup();
 });
 
-test("prefs are read at fire time, so toggling App updates takes effect without a restart", (t) => {
+test("toggling App updates on cannot re-enable the upstream feed", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
   const autoUpdater = makeAutoUpdater();
   const manager = createUpdateManager(autoUpdater);
@@ -117,28 +121,24 @@ test("prefs are read at fire time, so toggling App updates takes effect without 
 
   windowManager.notificationPrefs.notifyUpdates = true;
   t.mock.timers.tick(PERIODIC_INTERVAL_MS);
-  assert.equal(autoUpdater.calls, 1, "next periodic tick runs once re-enabled");
-
-  windowManager.notificationPrefs.notifyUpdates = false;
-  t.mock.timers.tick(PERIODIC_INTERVAL_MS);
-  assert.equal(autoUpdater.calls, 1, "and is skipped again once disabled");
+  assert.equal(autoUpdater.calls, 0, "fork kill switch outranks the in-app toggle");
 
   manager.cleanup();
 });
 
-test("before renderer prefs arrive, checks keep today's check-by-default behavior", (t) => {
+test("before renderer prefs arrive, this fork still does not check for updates", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
   const autoUpdater = makeAutoUpdater();
   const manager = createUpdateManager(autoUpdater);
 
   manager.checkForUpdatesOnStartup();
   t.mock.timers.tick(STARTUP_DELAY_MS);
-  assert.equal(autoUpdater.calls, 1);
+  assert.equal(autoUpdater.calls, 0);
 
   manager.cleanup();
 });
 
-test("a manual Check for Updates is never gated by the toggle", async () => {
+test("a manual Check for Updates does not reach the OpenWhispr feed", async () => {
   const autoUpdater = makeAutoUpdater();
   const manager = createUpdateManager(autoUpdater);
   manager.setWindowManager({
@@ -147,7 +147,7 @@ test("a manual Check for Updates is never gated by the toggle", async () => {
 
   const result = await manager.checkForUpdates();
 
-  assert.equal(autoUpdater.calls, 1);
+  assert.equal(autoUpdater.calls, 0);
   assert.equal(result.updateAvailable, false);
 });
 
@@ -169,33 +169,14 @@ test("offline with App updates off, no update-error reaches the renderers (#1605
 
   windowManager.notificationPrefs.notifyUpdates = true;
   t.mock.timers.tick(PERIODIC_INTERVAL_MS);
-  assert.ok(sent.includes("update-error"));
+  assert.deepEqual(sent, [], "re-enabling the toggle still cannot hit the feed");
 
   manager.cleanup();
 });
 
-test("the update-available popup honors the same App updates gate", () => {
-  const cases = [
-    { prefs: { notificationsEnabled: true, notifyUpdates: true }, shown: 1 },
-    { prefs: { notificationsEnabled: true, notifyUpdates: false }, shown: 0 },
-    { prefs: { notificationsEnabled: false, notifyUpdates: true }, shown: 0 },
-  ];
-
-  for (const { prefs, shown } of cases) {
-    const autoUpdater = makeAutoUpdater();
-    const manager = createUpdateManager(autoUpdater);
-    const popups = [];
-    manager.setWindowManager({
-      notificationPrefs: prefs,
-      showUpdateNotification(info) {
-        popups.push(info);
-        return Promise.resolve();
-      },
-    });
-
-    autoUpdater.listeners["update-available"]({ version: "9.9.9" });
-
-    assert.equal(popups.length, shown, JSON.stringify(prefs));
-    manager.cleanup();
-  }
+test("update-available listeners are not registered while fork updates are disabled", () => {
+  const autoUpdater = makeAutoUpdater();
+  const manager = createUpdateManager(autoUpdater);
+  assert.equal(autoUpdater.listeners["update-available"], undefined);
+  manager.cleanup();
 });

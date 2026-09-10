@@ -88,12 +88,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import LinuxPttSetupInfo from "./ui/LinuxPttSetupInfo";
 import { Toggle } from "./ui/toggle";
 import DeveloperSection from "./DeveloperSection";
-import ChatAgentSettings from "./settings/ChatAgentSettings";
-import DictationAgentSettings from "./settings/DictationAgentSettings";
-import DictationTranslationSettings from "./settings/DictationTranslationSettings";
 import InferenceConfigEditor from "./settings/InferenceConfigEditor";
-import { MeetingTranscriptionPanel } from "./settings/MeetingSettings";
-import { UploadTranscriptionPanel } from "./settings/UploadSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import { Skeleton } from "./ui/skeleton";
 import { Progress } from "./ui/progress";
@@ -144,6 +139,7 @@ import {
 import { usePolicyModeOptions, usePolicySnapshot } from "../hooks/usePolicy";
 import { usePolicyStore } from "../stores/policyStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
+import { PRODUCT_FEATURES, isInferenceModeEnabled } from "../config/productFeatures.js";
 import WorkspaceSection from "./settings/WorkspaceSection";
 import { enterpriseTileCta, type EnterpriseTileCta } from "../lib/workspaceBilling";
 import WorkspaceBillingOverview from "./settings/WorkspaceBillingOverview";
@@ -602,7 +598,7 @@ function TranscriptionSection({
             },
           ]
         : []),
-    ],
+    ].filter((mode) => isInferenceModeEnabled(mode.id)) as InferenceModeOption[],
     "transcription",
     transcriptionMode,
     {
@@ -839,28 +835,6 @@ const CLEANUP_MODE_TOAST_KEY: Record<InferenceMode, string> = {
   enterprise: "switchedEnterprise",
 };
 
-function NoteFormattingSettings() {
-  const { t } = useTranslation();
-  const autoGenerateNoteTitle = useSettingsStore((s) => s.autoGenerateNoteTitle);
-  const setAutoGenerateNoteTitle = useSettingsStore((s) => s.setAutoGenerateNoteTitle);
-
-  return (
-    <div className="space-y-4">
-      <SettingsPanel>
-        <SettingsPanelRow>
-          <SettingsRow
-            label={t("settingsPage.noteFormatting.autoGenerateTitle")}
-            description={t("settingsPage.noteFormatting.autoGenerateTitleDescription")}
-          >
-            <Toggle checked={autoGenerateNoteTitle} onChange={setAutoGenerateNoteTitle} />
-          </SettingsRow>
-        </SettingsPanelRow>
-      </SettingsPanel>
-      <InferenceConfigEditor scope="noteFormatting" />
-    </div>
-  );
-}
-
 function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModelsSectionProps) {
   const { t } = useTranslation();
 
@@ -905,14 +879,27 @@ type LlmTab =
   | "noteFormatting"
   | "chatIntelligence";
 
-const SPEECH_TABS: SpeechTab[] = ["dictation", "noteRecording", "upload"];
-const LLM_TABS: LlmTab[] = [
-  "dictationCleanup",
-  "dictationAgent",
-  "dictationTranslation",
-  "noteFormatting",
-  "chatIntelligence",
-];
+const SPEECH_TABS: SpeechTab[] = (["dictation", "noteRecording", "upload"] as SpeechTab[]).filter(
+  (tab) => {
+    if (tab === "noteRecording") return PRODUCT_FEATURES.meetings;
+    if (tab === "upload") return PRODUCT_FEATURES.upload;
+    return true;
+  }
+);
+const LLM_TABS: LlmTab[] = (
+  [
+    "dictationCleanup",
+    "dictationAgent",
+    "dictationTranslation",
+    "noteFormatting",
+    "chatIntelligence",
+  ] as LlmTab[]
+).filter((tab) => {
+  if (tab === "dictationAgent" || tab === "chatIntelligence") return PRODUCT_FEATURES.assistant;
+  if (tab === "dictationTranslation") return PRODUCT_FEATURES.translationHotkey;
+  if (tab === "noteFormatting") return PRODUCT_FEATURES.notes;
+  return true;
+});
 const AGENT_LLM_TABS = new Set<LlmTab>(["dictationAgent", "chatIntelligence"]);
 
 function useSubTab<T extends string>(storageKey: string, options: readonly T[], initial?: T) {
@@ -997,8 +984,8 @@ function SpeechToTextTabs({
 }: {
   initialTab?: SpeechTab;
   renderDictation: () => React.ReactNode;
-  renderNoteRecording: () => React.ReactNode;
-  renderUpload: () => React.ReactNode;
+  renderNoteRecording?: () => React.ReactNode;
+  renderUpload?: () => React.ReactNode;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useSubTab<SpeechTab>("settings.speechToTextTab", SPEECH_TABS, initialTab);
@@ -1007,7 +994,7 @@ function SpeechToTextTabs({
     { id: "dictation", name: t("settingsPage.speechToText.tabs.dictation") },
     { id: "noteRecording", name: t("settingsPage.speechToText.tabs.noteRecording") },
     { id: "upload", name: t("settingsPage.speechToText.tabs.upload") },
-  ];
+  ].filter((item) => SPEECH_TABS.includes(item.id as SpeechTab));
 
   return (
     <div className="space-y-4">
@@ -1015,23 +1002,27 @@ function SpeechToTextTabs({
         title={t("settingsPage.speechToText.title")}
         description={t("settingsPage.speechToText.description")}
       />
-      <ProviderTabs
-        providers={subTabs}
-        selectedId={tab}
-        onSelect={(id) => setTab(id as SpeechTab)}
-        renderIcon={(id) =>
-          id === "dictation" ? (
-            <Mic className="w-3.5 h-3.5" />
-          ) : id === "upload" ? (
-            <Upload className="w-3.5 h-3.5" />
-          ) : (
-            <FileAudio className="w-3.5 h-3.5" />
-          )
-        }
-      />
+      {subTabs.length > 1 && (
+        <ProviderTabs
+          providers={subTabs}
+          selectedId={tab}
+          onSelect={(id) => setTab(id as SpeechTab)}
+          renderIcon={(id) =>
+            id === "dictation" ? (
+              <Mic className="w-3.5 h-3.5" />
+            ) : id === "upload" ? (
+              <Upload className="w-3.5 h-3.5" />
+            ) : (
+              <FileAudio className="w-3.5 h-3.5" />
+            )
+          }
+        />
+      )}
       <TabPanel active={tab === "dictation"}>{renderDictation()}</TabPanel>
-      <TabPanel active={tab === "noteRecording"}>{renderNoteRecording()}</TabPanel>
-      <TabPanel active={tab === "upload"}>{renderUpload()}</TabPanel>
+      {renderNoteRecording && (
+        <TabPanel active={tab === "noteRecording"}>{renderNoteRecording()}</TabPanel>
+      )}
+      {renderUpload && <TabPanel active={tab === "upload"}>{renderUpload()}</TabPanel>}
     </div>
   );
 }
@@ -1046,10 +1037,10 @@ function LlmsTabs({
 }: {
   initialTab?: LlmTab;
   renderDictationCleanup: () => React.ReactNode;
-  renderDictationAgent: () => React.ReactNode;
-  renderDictationTranslation: () => React.ReactNode;
-  renderNoteFormatting: () => React.ReactNode;
-  renderChatIntelligence: () => React.ReactNode;
+  renderDictationAgent?: () => React.ReactNode;
+  renderDictationTranslation?: () => React.ReactNode;
+  renderNoteFormatting?: () => React.ReactNode;
+  renderChatIntelligence?: () => React.ReactNode;
 }) {
   const { t } = useTranslation();
   const agentAllowed = usePolicyStore(isAgentAllowed);
@@ -1072,25 +1063,31 @@ function LlmsTabs({
         title={t("settingsPage.llms.title")}
         description={t("settingsPage.llms.description")}
       />
-      <ProviderTabs
-        providers={subTabs}
-        selectedId={tab}
-        onSelect={(id) => setTab(id as LlmTab)}
-        renderIcon={(id) => {
-          if (id === "dictationCleanup") return <Wand2 className="w-3.5 h-3.5" />;
-          if (id === "dictationAgent") return <Sparkles className="w-3.5 h-3.5" />;
-          if (id === "dictationTranslation") return <Languages className="w-3.5 h-3.5" />;
-          if (id === "noteFormatting") return <BookOpen className="w-3.5 h-3.5" />;
-          return <MessageSquare className="w-3.5 h-3.5" />;
-        }}
-      />
+      {subTabs.length > 1 && (
+        <ProviderTabs
+          providers={subTabs}
+          selectedId={tab}
+          onSelect={(id) => setTab(id as LlmTab)}
+          renderIcon={(id) => {
+            if (id === "dictationCleanup") return <Wand2 className="w-3.5 h-3.5" />;
+            if (id === "dictationAgent") return <Sparkles className="w-3.5 h-3.5" />;
+            if (id === "dictationTranslation") return <Languages className="w-3.5 h-3.5" />;
+            if (id === "noteFormatting") return <BookOpen className="w-3.5 h-3.5" />;
+            return <MessageSquare className="w-3.5 h-3.5" />;
+          }}
+        />
+      )}
       <TabPanel active={tab === "dictationCleanup"}>{renderDictationCleanup()}</TabPanel>
-      {agentAllowed && (
+      {agentAllowed && renderDictationAgent && (
         <TabPanel active={tab === "dictationAgent"}>{renderDictationAgent()}</TabPanel>
       )}
-      <TabPanel active={tab === "dictationTranslation"}>{renderDictationTranslation()}</TabPanel>
-      <TabPanel active={tab === "noteFormatting"}>{renderNoteFormatting()}</TabPanel>
-      {agentAllowed && (
+      {renderDictationTranslation && (
+        <TabPanel active={tab === "dictationTranslation"}>{renderDictationTranslation()}</TabPanel>
+      )}
+      {renderNoteFormatting && (
+        <TabPanel active={tab === "noteFormatting"}>{renderNoteFormatting()}</TabPanel>
+      )}
+      {agentAllowed && renderChatIntelligence && (
         <TabPanel active={tab === "chatIntelligence"}>{renderChatIntelligence()}</TabPanel>
       )}
     </div>
@@ -3081,46 +3078,52 @@ export default function SettingsPage({
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.notifications.meetingDetection")}
-                    description={t(
-                      "settingsPage.general.notifications.meetingDetectionDescription"
-                    )}
-                  >
-                    <Toggle
-                      checked={notifyMeetingDetection}
-                      onChange={setNotifyMeetingDetection}
-                      disabled={!notificationsEnabled}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.notifications.calendarReminders")}
-                    description={t(
-                      "settingsPage.general.notifications.calendarRemindersDescription"
-                    )}
-                  >
-                    <Toggle
-                      checked={notifyCalendarReminders}
-                      onChange={setNotifyCalendarReminders}
-                      disabled={!notificationsEnabled}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.notifications.updates")}
-                    description={t("settingsPage.general.notifications.updatesDescription")}
-                  >
-                    <Toggle
-                      checked={notifyUpdates}
-                      onChange={setNotifyUpdates}
-                      disabled={!notificationsEnabled}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
+                {PRODUCT_FEATURES.meetings && (
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.notifications.meetingDetection")}
+                      description={t(
+                        "settingsPage.general.notifications.meetingDetectionDescription"
+                      )}
+                    >
+                      <Toggle
+                        checked={notifyMeetingDetection}
+                        onChange={setNotifyMeetingDetection}
+                        disabled={!notificationsEnabled}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                )}
+                {PRODUCT_FEATURES.calendar && (
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.notifications.calendarReminders")}
+                      description={t(
+                        "settingsPage.general.notifications.calendarRemindersDescription"
+                      )}
+                    >
+                      <Toggle
+                        checked={notifyCalendarReminders}
+                        onChange={setNotifyCalendarReminders}
+                        disabled={!notificationsEnabled}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                )}
+                {PRODUCT_FEATURES.appUpdates && (
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.notifications.updates")}
+                      description={t("settingsPage.general.notifications.updatesDescription")}
+                    >
+                      <Toggle
+                        checked={notifyUpdates}
+                        onChange={setNotifyUpdates}
+                        disabled={!notificationsEnabled}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                )}
               </SettingsPanel>
             </div>
 
@@ -3151,61 +3154,63 @@ export default function SettingsPage({
             </div>
 
             {/* Save Notes as Files */}
-            <div>
-              <SectionHeader title={t("settings.noteFiles.title")} />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settings.noteFiles.title")}
-                    description={t("settings.noteFiles.description")}
-                  >
-                    <Toggle checked={noteFilesEnabled} onChange={handleNoteFilesToggle} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                {noteFilesEnabled && (
-                  <>
-                    <SettingsPanelRow>
-                      <SettingsRow
-                        label={t("settings.noteFiles.path")}
-                        description={noteFilesPath || noteFilesDefaultPath || "..."}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={handleNoteFilesChangePath}
+            {PRODUCT_FEATURES.notes && (
+              <div>
+                <SectionHeader title={t("settings.noteFiles.title")} />
+                <SettingsPanel>
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settings.noteFiles.title")}
+                      description={t("settings.noteFiles.description")}
+                    >
+                      <Toggle checked={noteFilesEnabled} onChange={handleNoteFilesToggle} />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                  {noteFilesEnabled && (
+                    <>
+                      <SettingsPanelRow>
+                        <SettingsRow
+                          label={t("settings.noteFiles.path")}
+                          description={noteFilesPath || noteFilesDefaultPath || "..."}
                         >
-                          {t("settings.noteFiles.changePath")}
-                        </Button>
-                      </SettingsRow>
-                    </SettingsPanelRow>
-                    <SettingsPanelRow>
-                      <SettingsRow
-                        label={t("settings.noteFiles.rebuild")}
-                        description={t("settings.noteFiles.rebuildDescription")}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          disabled={noteFilesRebuilding}
-                          onClick={handleNoteFilesRebuild}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={handleNoteFilesChangePath}
+                          >
+                            {t("settings.noteFiles.changePath")}
+                          </Button>
+                        </SettingsRow>
+                      </SettingsPanelRow>
+                      <SettingsPanelRow>
+                        <SettingsRow
+                          label={t("settings.noteFiles.rebuild")}
+                          description={t("settings.noteFiles.rebuildDescription")}
                         >
-                          {noteFilesRebuilding ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            t("settings.noteFiles.rebuild")
-                          )}
-                        </Button>
-                      </SettingsRow>
-                    </SettingsPanelRow>
-                  </>
-                )}
-              </SettingsPanel>
-            </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            disabled={noteFilesRebuilding}
+                            onClick={handleNoteFilesRebuild}
+                          >
+                            {noteFilesRebuilding ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              t("settings.noteFiles.rebuild")
+                            )}
+                          </Button>
+                        </SettingsRow>
+                      </SettingsPanelRow>
+                    </>
+                  )}
+                </SettingsPanel>
+              </div>
+            )}
 
             {/* Import from Granola */}
-            <GranolaImportSection showAlertDialog={showAlertDialog} />
+            {PRODUCT_FEATURES.notes && <GranolaImportSection showAlertDialog={showAlertDialog} />}
 
             {/* Floating Icon */}
             <div>
@@ -3987,7 +3992,7 @@ EOF`,
             </div>
 
             {/* Voice Agent Hotkey */}
-            {agentAllowedByPolicy && (
+            {PRODUCT_FEATURES.assistant && agentAllowedByPolicy && (
               <div>
                 <SectionHeader
                   title={t("settingsPage.general.voiceAgentHotkey.title")}
@@ -4009,76 +4014,80 @@ EOF`,
             )}
 
             {/* Translation Hotkey */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.translationHotkey.title")}
-                description={t("settingsPage.general.translationHotkey.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={translationKey}
-                    onChange={(list) => commitAgentHotkey(setTranslationKey, list)}
-                    onClear={() => commitAgentHotkey(setTranslationKey, "")}
-                    validate={validateTranslationHotkey}
-                    disabled={isAgentHotkeyCommitting}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
+            {PRODUCT_FEATURES.translationHotkey && (
+              <div>
+                <SectionHeader
+                  title={t("settingsPage.general.translationHotkey.title")}
+                  description={t("settingsPage.general.translationHotkey.description")}
+                />
+                <SettingsPanel>
+                  <SettingsPanelRow>
+                    <HotkeyListInput
+                      value={translationKey}
+                      onChange={(list) => commitAgentHotkey(setTranslationKey, list)}
+                      onClear={() => commitAgentHotkey(setTranslationKey, "")}
+                      validate={validateTranslationHotkey}
+                      disabled={isAgentHotkeyCommitting}
+                      maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                    />
+                  </SettingsPanelRow>
+                </SettingsPanel>
+              </div>
+            )}
 
             {/* Meeting Mode Hotkey */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.meetingHotkey.title")}
-                description={t("settingsPage.general.meetingHotkey.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={meetingKey}
-                    onChange={(list) => registerMeetingHotkey(list)}
-                    onClear={async () => {
-                      await window.electronAPI?.registerMeetingHotkey?.("");
-                      setMeetingKey("");
-                    }}
-                    validate={validateMeetingHotkey}
-                    disabled={isMeetingHotkeyRegistering}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-                <SettingsPanelRow className="flex items-center justify-between gap-3 border-t border-border/40 dark:border-white/5">
-                  <span className="text-xs text-muted-foreground/80">
-                    {t("settingsPage.general.meetingHotkey.layoutLabel")}
-                  </span>
-                  <Select
-                    value={meetingHotkeyLayoutMode}
-                    onValueChange={(value) =>
-                      setMeetingHotkeyLayoutMode(value as "side-panel" | "full-width")
-                    }
-                  >
-                    <SelectTrigger className="h-7 w-36 text-xs rounded-lg px-2.5 [&>svg]:h-3 [&>svg]:w-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        value="full-width"
-                        className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
-                      >
-                        {t("settingsPage.general.meetingHotkey.layoutFullWidth")}
-                      </SelectItem>
-                      <SelectItem
-                        value="side-panel"
-                        className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
-                      >
-                        {t("settingsPage.general.meetingHotkey.layoutSidePanel")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
+            {PRODUCT_FEATURES.meetings && (
+              <div>
+                <SectionHeader
+                  title={t("settingsPage.general.meetingHotkey.title")}
+                  description={t("settingsPage.general.meetingHotkey.description")}
+                />
+                <SettingsPanel>
+                  <SettingsPanelRow>
+                    <HotkeyListInput
+                      value={meetingKey}
+                      onChange={(list) => registerMeetingHotkey(list)}
+                      onClear={async () => {
+                        await window.electronAPI?.registerMeetingHotkey?.("");
+                        setMeetingKey("");
+                      }}
+                      validate={validateMeetingHotkey}
+                      disabled={isMeetingHotkeyRegistering}
+                      maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                    />
+                  </SettingsPanelRow>
+                  <SettingsPanelRow className="flex items-center justify-between gap-3 border-t border-border/40 dark:border-white/5">
+                    <span className="text-xs text-muted-foreground/80">
+                      {t("settingsPage.general.meetingHotkey.layoutLabel")}
+                    </span>
+                    <Select
+                      value={meetingHotkeyLayoutMode}
+                      onValueChange={(value) =>
+                        setMeetingHotkeyLayoutMode(value as "side-panel" | "full-width")
+                      }
+                    >
+                      <SelectTrigger className="h-7 w-36 text-xs rounded-lg px-2.5 [&>svg]:h-3 [&>svg]:w-3">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value="full-width"
+                          className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
+                        >
+                          {t("settingsPage.general.meetingHotkey.layoutFullWidth")}
+                        </SelectItem>
+                        <SelectItem
+                          value="side-panel"
+                          className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
+                        >
+                          {t("settingsPage.general.meetingHotkey.layoutSidePanel")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </SettingsPanelRow>
+                </SettingsPanel>
+              </div>
+            )}
           </div>
         );
 
@@ -4487,141 +4496,143 @@ EOF`,
                   </SettingsRow>
                 </SettingsPanelRow>
 
-                <SettingsPanelRow>
-                  <div className="space-y-2.5">
-                    <Button
-                      onClick={async () => {
-                        try {
-                          const result = await checkForUpdates();
-                          if (result && !result.updateAvailable) {
-                            toast({
-                              title: t("settingsPage.general.updates.dialogs.noUpdates.title"),
-                              description: t(
-                                "settingsPage.general.updates.dialogs.noUpdates.description"
-                              ),
-                            });
-                          }
-                        } catch {}
-                      }}
-                      disabled={checkingForUpdates || updateStatus.isDevelopment}
-                      variant="outline"
-                      className="w-full"
-                      size="sm"
-                    >
-                      <RefreshCw
-                        size={13}
-                        className={`mr-1.5 ${checkingForUpdates ? "animate-spin" : ""}`}
-                      />
-                      {checkingForUpdates
-                        ? t("settingsPage.general.updates.checking")
-                        : t("settingsPage.general.updates.checkForUpdates")}
-                    </Button>
-
-                    {isUpdateAvailable && !updateStatus.updateDownloaded && (
-                      <div className="space-y-2">
-                        <Button
-                          onClick={async () => {
-                            try {
-                              await downloadUpdate();
-                            } catch {
-                              showAlertDialog({
-                                title: t(
-                                  "settingsPage.general.updates.dialogs.downloadFailed.title"
-                                ),
+                {PRODUCT_FEATURES.appUpdates ? (
+                  <SettingsPanelRow>
+                    <div className="space-y-2.5">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const result = await checkForUpdates();
+                            if (result && !result.updateAvailable) {
+                              toast({
+                                title: t("settingsPage.general.updates.dialogs.noUpdates.title"),
                                 description: t(
-                                  "settingsPage.general.updates.dialogs.downloadFailed.description"
+                                  "settingsPage.general.updates.dialogs.noUpdates.description"
                                 ),
                               });
                             }
-                          }}
-                          disabled={downloadingUpdate}
-                          variant="success"
-                          className="w-full"
-                          size="sm"
-                        >
-                          <Download
-                            size={13}
-                            className={`mr-1.5 ${downloadingUpdate ? "animate-pulse" : ""}`}
-                          />
-                          {downloadingUpdate
-                            ? t("settingsPage.general.updates.downloading", {
-                                progress: Math.round(updateDownloadProgress),
-                              })
-                            : t("settingsPage.general.updates.downloadUpdate", {
-                                version: updateInfo?.version || "",
-                              })}
-                        </Button>
-
-                        {downloadingUpdate && (
-                          <div className="h-1 w-full overflow-hidden rounded-full bg-muted/50">
-                            <div
-                              className="h-full bg-success transition-[width] duration-200 rounded-full"
-                              style={{
-                                width: `${Math.min(100, Math.max(0, updateDownloadProgress))}%`,
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {updateStatus.updateDownloaded && (
-                      <Button
-                        onClick={() => {
-                          showConfirmDialog({
-                            title: t("settingsPage.general.updates.dialogs.installUpdate.title"),
-                            description: t(
-                              "settingsPage.general.updates.dialogs.installUpdate.description",
-                              { version: updateInfo?.version || "" }
-                            ),
-                            confirmText: t(
-                              "settingsPage.general.updates.dialogs.installUpdate.confirmText"
-                            ),
-                            onConfirm: async () => {
-                              try {
-                                await installUpdateAction();
-                              } catch {
-                                showAlertDialog({
-                                  title: t(
-                                    "settingsPage.general.updates.dialogs.installFailed.title"
-                                  ),
-                                  description: t(
-                                    "settingsPage.general.updates.dialogs.installFailed.description"
-                                  ),
-                                });
-                              }
-                            },
-                          });
+                          } catch {}
                         }}
-                        disabled={installInitiated}
+                        disabled={checkingForUpdates || updateStatus.isDevelopment}
+                        variant="outline"
                         className="w-full"
                         size="sm"
                       >
                         <RefreshCw
-                          size={14}
-                          className={`mr-2 ${installInitiated ? "animate-spin" : ""}`}
+                          size={13}
+                          className={`mr-1.5 ${checkingForUpdates ? "animate-spin" : ""}`}
                         />
-                        {installInitiated
-                          ? t("settingsPage.general.updates.restarting")
-                          : t("settingsPage.general.updates.installAndRestart")}
+                        {checkingForUpdates
+                          ? t("settingsPage.general.updates.checking")
+                          : t("settingsPage.general.updates.checkForUpdates")}
                       </Button>
-                    )}
-                  </div>
 
-                  {updateInfo?.releaseNotes && (
-                    <div className="mt-4 pt-4 border-t border-border/30">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                        {t("settingsPage.general.updates.whatsNew", {
-                          version: updateInfo.version,
-                        })}
-                      </p>
-                      <div
-                        className="text-xs text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:space-y-1 [&_li]:pl-1 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_a]:text-link [&_a]:underline"
-                        dangerouslySetInnerHTML={{ __html: updateInfo.releaseNotes }}
-                      />
+                      {isUpdateAvailable && !updateStatus.updateDownloaded && (
+                        <div className="space-y-2">
+                          <Button
+                            onClick={async () => {
+                              try {
+                                await downloadUpdate();
+                              } catch {
+                                showAlertDialog({
+                                  title: t(
+                                    "settingsPage.general.updates.dialogs.downloadFailed.title"
+                                  ),
+                                  description: t(
+                                    "settingsPage.general.updates.dialogs.downloadFailed.description"
+                                  ),
+                                });
+                              }
+                            }}
+                            disabled={downloadingUpdate}
+                            variant="success"
+                            className="w-full"
+                            size="sm"
+                          >
+                            <Download
+                              size={13}
+                              className={`mr-1.5 ${downloadingUpdate ? "animate-pulse" : ""}`}
+                            />
+                            {downloadingUpdate
+                              ? t("settingsPage.general.updates.downloading", {
+                                  progress: Math.round(updateDownloadProgress),
+                                })
+                              : t("settingsPage.general.updates.downloadUpdate", {
+                                  version: updateInfo?.version || "",
+                                })}
+                          </Button>
+
+                          {downloadingUpdate && (
+                            <div className="h-1 w-full overflow-hidden rounded-full bg-muted/50">
+                              <div
+                                className="h-full bg-success transition-[width] duration-200 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, updateDownloadProgress))}%`,
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {updateStatus.updateDownloaded && (
+                        <Button
+                          onClick={() => {
+                            showConfirmDialog({
+                              title: t("settingsPage.general.updates.dialogs.installUpdate.title"),
+                              description: t(
+                                "settingsPage.general.updates.dialogs.installUpdate.description",
+                                { version: updateInfo?.version || "" }
+                              ),
+                              confirmText: t(
+                                "settingsPage.general.updates.dialogs.installUpdate.confirmText"
+                              ),
+                              onConfirm: async () => {
+                                try {
+                                  await installUpdateAction();
+                                } catch {
+                                  showAlertDialog({
+                                    title: t(
+                                      "settingsPage.general.updates.dialogs.installFailed.title"
+                                    ),
+                                    description: t(
+                                      "settingsPage.general.updates.dialogs.installFailed.description"
+                                    ),
+                                  });
+                                }
+                              },
+                            });
+                          }}
+                          disabled={installInitiated}
+                          className="w-full"
+                          size="sm"
+                        >
+                          <RefreshCw
+                            size={14}
+                            className={`mr-2 ${installInitiated ? "animate-spin" : ""}`}
+                          />
+                          {installInitiated
+                            ? t("settingsPage.general.updates.restarting")
+                            : t("settingsPage.general.updates.installAndRestart")}
+                        </Button>
+                      )}
                     </div>
-                  )}
-                </SettingsPanelRow>
+
+                    {updateInfo?.releaseNotes && (
+                      <div className="mt-4 pt-4 border-t border-border/30">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          {t("settingsPage.general.updates.whatsNew", {
+                            version: updateInfo.version,
+                          })}
+                        </p>
+                        <div
+                          className="text-xs text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:space-y-1 [&_li]:pl-1 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_a]:text-link [&_a]:underline"
+                          dangerouslySetInnerHTML={{ __html: updateInfo.releaseNotes }}
+                        />
+                      </div>
+                    )}
+                  </SettingsPanelRow>
+                ) : null}
               </SettingsPanel>
             </div>
 
@@ -4833,19 +4844,6 @@ EOF`,
                   renderWhisperVadSettings()}
               </div>
             )}
-            renderNoteRecording={() => (
-              <div className="space-y-6">
-                <MeetingTranscriptionPanel />
-                {transcriptionMode === "local" &&
-                  localTranscriptionProvider === "whisper" &&
-                  renderWhisperVadSettings()}
-              </div>
-            )}
-            renderUpload={() => (
-              <div className="space-y-6">
-                <UploadTranscriptionPanel />
-              </div>
-            )}
           />
         </TabPanel>
       )}
@@ -4855,7 +4853,6 @@ EOF`,
             initialTab={
               activeSection === "llms" ? (initialSubTab as LlmTab | undefined) : undefined
             }
-            renderChatIntelligence={() => <ChatAgentSettings />}
             renderDictationCleanup={() => (
               <div className="space-y-6">
                 <AiModelsSection
@@ -4874,9 +4871,6 @@ EOF`,
                 </div>
               </div>
             )}
-            renderDictationAgent={() => <DictationAgentSettings />}
-            renderDictationTranslation={() => <DictationTranslationSettings />}
-            renderNoteFormatting={() => <NoteFormattingSettings />}
           />
         </TabPanel>
       )}

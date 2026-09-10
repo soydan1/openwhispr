@@ -15,6 +15,7 @@ import type { CalendarAccount } from "../types/calendar";
 import { PROMPT_KIND_LIST, type PromptKind } from "../config/prompts/registry";
 import { sweepRetiredPromptOverrides } from "../config/retiredPrompts";
 import { sweepRetiredCloudModelSelections } from "../config/retiredCloudModels";
+import { resolvePersonalInferenceMode } from "../config/productFeatures.js";
 import {
   deriveReasoningMode,
   buildReasoningScopePatches,
@@ -340,7 +341,7 @@ function deriveTranscriptionMode(
   if (cloudTranscriptionMode === "byok") {
     return cloudTranscriptionProvider === "custom" ? "self-hosted" : "providers";
   }
-  return "openwhispr";
+  return resolvePersonalInferenceMode("openwhispr") as InferenceMode;
 }
 
 // Map the legacy `cloudReasoningMode` + provider pair to the InferenceMode the
@@ -1412,8 +1413,14 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   reasoningModelByProvider: readModelMemory("reasoningModelByProvider"),
   // Secrets aren't hydrated yet at construction; the BYOK default is set
   // post-hydration in initializeSettings.
-  cloudTranscriptionMode: readString("cloudTranscriptionMode", "openwhispr"),
-  cleanupCloudMode: readString("cleanupCloudMode", "openwhispr"),
+  cloudTranscriptionMode: (() => {
+    const v = readString("cloudTranscriptionMode", "byok");
+    return v === "openwhispr" ? "byok" : v;
+  })(),
+  cleanupCloudMode: (() => {
+    const v = readString("cleanupCloudMode", "byok");
+    return v === "openwhispr" ? "byok" : v;
+  })(),
   cleanupCloudBaseUrl: readString("cleanupCloudBaseUrl", API_ENDPOINTS.OPENAI_BASE),
   cortiEnvironment: readString("cortiEnvironment", "us"),
   cortiTenant: readString("cortiTenant", "base"),
@@ -1588,9 +1595,12 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   isSignedIn: readBoolean("isSignedIn", false),
 
   transcriptionMode: (() => {
-    const v = readString("transcriptionMode", "openwhispr");
-    if (v === "openwhispr" || v === "providers" || v === "local" || v === "self-hosted") return v;
-    return "openwhispr" as InferenceMode;
+    const v = readString("transcriptionMode", "providers");
+    const allowed =
+      v === "openwhispr" || v === "providers" || v === "local" || v === "self-hosted"
+        ? v
+        : "providers";
+    return resolvePersonalInferenceMode(allowed) as InferenceMode;
   })(),
   remoteTranscriptionType: (() => {
     const v = readString("remoteTranscriptionType", "lan");
@@ -1599,16 +1609,16 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   remoteTranscriptionUrl: readString("remoteTranscriptionUrl", ""),
   remoteTranscriptionModel: readString("remoteTranscriptionModel", ""),
   cleanupMode: (() => {
-    const v = readString("cleanupMode", "openwhispr");
-    if (
+    const v = readString("cleanupMode", "providers");
+    const allowed =
       v === "openwhispr" ||
       v === "providers" ||
       v === "local" ||
       v === "self-hosted" ||
       v === "enterprise"
-    )
-      return v;
-    return "openwhispr" as InferenceMode;
+        ? v
+        : "providers";
+    return resolvePersonalInferenceMode(allowed) as InferenceMode;
   })(),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
 

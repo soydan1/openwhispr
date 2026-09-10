@@ -3,23 +3,18 @@ const test = require("node:test");
 
 const load = () => import("../../src/components/onboarding/flow.ts");
 
-test("account flow includes the complete guided setup", async () => {
+const PERSONAL_ROUTE = [
+  "permissions",
+  "dictation-hotkey",
+  "activation-mode",
+  "setup-choice",
+];
+
+test("personal-dictation fork skips account, assistant, and notes onboarding", async () => {
   const { getOnboardingRoute } = await load();
   assert.deepEqual(
     getOnboardingRoute({ authPath: "account", setupMode: null, agentAllowed: true }),
-    [
-      "auth",
-      "permissions",
-      "languages",
-      "use-cases",
-      "dictation-hotkey",
-      "activation-mode",
-      "dictation-demo",
-      "assistant-hotkey",
-      "assistant-demo",
-      "notes",
-      "setup-choice",
-    ]
+    PERSONAL_ROUTE
   );
 });
 
@@ -27,13 +22,10 @@ test("guest flow keeps permissions and the hotkey before setup choice", async ()
   const { getOnboardingRoute } = await load();
   // finalizeOnboarding registers the dictation hotkey on every path, so guests
   // must still grant the mic and see the key they are getting.
-  assert.deepEqual(getOnboardingRoute({ authPath: "guest", setupMode: null, agentAllowed: true }), [
-    "auth",
-    "permissions",
-    "dictation-hotkey",
-    "activation-mode",
-    "setup-choice",
-  ]);
+  assert.deepEqual(
+    getOnboardingRoute({ authPath: "guest", setupMode: null, agentAllowed: true }),
+    PERSONAL_ROUTE
+  );
 });
 
 test("every dictation route restores activation mode setup after shortcut capture", async () => {
@@ -61,19 +53,11 @@ test("policy removes assistant states", async () => {
   assert.equal(route.at(-1), "setup-choice");
 });
 
-test("setup choice appends the selected two-stage route", async () => {
+test("setup choice appends the selected dictation provider step", async () => {
   const { getOnboardingRoute } = await load();
   assert.deepEqual(
     getOnboardingRoute({ authPath: "guest", setupMode: "byok", agentAllowed: true }),
-    [
-      "auth",
-      "permissions",
-      "dictation-hotkey",
-      "activation-mode",
-      "setup-choice",
-      "byok-dictation",
-      "byok-assistant",
-    ]
+    [...PERSONAL_ROUTE, "byok-dictation"]
   );
   assert.deepEqual(
     getOnboardingRoute({ authPath: "account", setupMode: "local", agentAllowed: false }).slice(-2),
@@ -81,7 +65,7 @@ test("setup choice appends the selected two-stage route", async () => {
   );
 });
 
-test("a confirmed enterprise workspace ends the account route at notes", async () => {
+test("a confirmed enterprise workspace still uses the personal setup-choice route", async () => {
   const { getOnboardingRoute } = await load();
   const route = getOnboardingRoute({
     authPath: "account",
@@ -89,8 +73,8 @@ test("a confirmed enterprise workspace ends the account route at notes", async (
     agentAllowed: true,
     skipSetupChoice: true,
   });
-  assert.equal(route.at(-1), "notes");
-  assert.equal(route.includes("setup-choice"), false);
+  assert.equal(route.at(-1), "setup-choice");
+  assert.equal(route.includes("notes"), false);
 });
 
 test("notes starts with Skip and switches to Continue after a calendar connects", async () => {
@@ -260,35 +244,23 @@ test("legacy numeric steps migrate conservatively", async () => {
   assert.equal(migrateLegacyOnboardingStep("999"), "setup-choice");
 });
 
-test("an off-route assistant step clamps to its neighbour, not the end of the route", async () => {
+test("an off-route assistant step clamps onto the personal dictation route", async () => {
   const { getOnboardingRoute, reconcileStepWithRoute } = await load();
-  // agentAllowed false is what a failed policy fetch produces, and it drops both
-  // assistant steps from the route. Clamping to route.at(-1) used to land the user
-  // on setup-choice, skipping notes and looking like a jump to the plan chooser.
   const route = getOnboardingRoute({
     authPath: "account",
     setupMode: null,
     agentAllowed: false,
   });
   assert.equal(route.includes("assistant-hotkey"), false);
-  assert.equal(reconcileStepWithRoute("assistant-hotkey", route), "dictation-demo");
-  assert.equal(reconcileStepWithRoute("assistant-demo", route), "notes");
-  assert.notEqual(reconcileStepWithRoute("assistant-hotkey", route), "setup-choice");
-
-  // With the agent allowed the steps are on the route and pass through untouched.
-  const agentRoute = getOnboardingRoute({
-    authPath: "account",
-    setupMode: null,
-    agentAllowed: true,
-  });
-  assert.equal(reconcileStepWithRoute("assistant-hotkey", agentRoute), "assistant-hotkey");
+  assert.equal(reconcileStepWithRoute("assistant-hotkey", route), "activation-mode");
+  assert.equal(reconcileStepWithRoute("assistant-demo", route), "setup-choice");
 });
 
 test("route helpers recover from ineligible steps", async () => {
   const { getNextOnboardingStep, getOnboardingRoute, reconcileStepWithRoute } = await load();
   const route = getOnboardingRoute({ authPath: "guest", setupMode: null, agentAllowed: true });
   assert.equal(reconcileStepWithRoute("assistant-demo", route), "setup-choice");
-  assert.equal(getNextOnboardingStep("auth", route), "permissions");
+  assert.equal(getNextOnboardingStep("permissions", route), "dictation-hotkey");
   assert.equal(getNextOnboardingStep("setup-choice", route), null);
 });
 
@@ -296,8 +268,6 @@ test("progress counts every step the user is shown, once each", async () => {
   const { getOnboardingProgress, getOnboardingRoute } = await load();
   const route = getOnboardingRoute({ authPath: "account", setupMode: null, agentAllowed: true });
 
-  // The compact steps render in a frame with no footer, so they carry no row and
-  // must not inflate the total — landing on languages is "1 of 9", not "3 of 11".
   assert.equal(getOnboardingProgress("auth", route), null);
   assert.equal(getOnboardingProgress("permissions", route), null);
 
@@ -306,31 +276,24 @@ test("progress counts every step the user is shown, once each", async () => {
     counted.map((stepId) => getOnboardingProgress(stepId, route).index),
     counted.map((_, index) => index)
   );
-  assert.deepEqual(getOnboardingProgress("languages", route), { index: 0, total: 9 });
-  assert.deepEqual(getOnboardingProgress("setup-choice", route), { index: 8, total: 9 });
+  assert.deepEqual(getOnboardingProgress("dictation-hotkey", route), { index: 0, total: 3 });
+  assert.deepEqual(getOnboardingProgress("setup-choice", route), { index: 2, total: 3 });
 });
 
-test("progress total tracks the conditional parts of the route", async () => {
+test("progress total tracks the selected provider step", async () => {
   const { getOnboardingProgress, getOnboardingRoute } = await load();
   const context = { authPath: "account", setupMode: null, agentAllowed: true };
 
-  // Dropping the assistant pair shortens the row rather than leaving two dots
-  // that can never fill.
   const noAgent = getOnboardingRoute({ ...context, agentAllowed: false });
-  assert.equal(getOnboardingProgress("languages", noAgent).total, 7);
-  assert.deepEqual(getOnboardingProgress("setup-choice", noAgent), { index: 6, total: 7 });
+  assert.deepEqual(getOnboardingProgress("setup-choice", noAgent), { index: 2, total: 3 });
 
-  // Picking a non-cloud mode appends the provider pair, so the row grows by two
-  // at that moment and the last provider step is what fills it.
   const byok = getOnboardingRoute({ ...context, setupMode: "byok" });
-  assert.deepEqual(getOnboardingProgress("setup-choice", byok), { index: 8, total: 11 });
-  assert.deepEqual(getOnboardingProgress("byok-assistant", byok), { index: 10, total: 11 });
+  assert.deepEqual(getOnboardingProgress("setup-choice", byok), { index: 2, total: 4 });
+  assert.deepEqual(getOnboardingProgress("byok-dictation", byok), { index: 3, total: 4 });
 });
 
 test("progress counts only the guest steps that draw a footer", async () => {
   const { getOnboardingProgress, getOnboardingRoute } = await load();
-  // auth and permissions are compact, so the pre-plan guest route counts
-  // dictation-hotkey, activation-mode and setup-choice: a three-dot row.
   const guest = getOnboardingRoute({ authPath: "guest", setupMode: null, agentAllowed: true });
   assert.deepEqual(getOnboardingProgress("setup-choice", guest), { index: 2, total: 3 });
 
@@ -339,13 +302,12 @@ test("progress counts only the guest steps that draw a footer", async () => {
     setupMode: "byok",
     agentAllowed: true,
   });
-  assert.deepEqual(getOnboardingProgress("setup-choice", guestByok), { index: 2, total: 5 });
+  assert.deepEqual(getOnboardingProgress("setup-choice", guestByok), { index: 2, total: 4 });
 
-  // An off-route step has no position to report.
   assert.equal(getOnboardingProgress("notes", guestByok), null);
 });
 
-test("required models insert a blocking step right after auth — account path only", async () => {
+test("required models do not insert on the personal-dictation route", async () => {
   const { getOnboardingRoute } = await load();
   const route = getOnboardingRoute({
     authPath: "account",
@@ -353,7 +315,7 @@ test("required models insert a blocking step right after auth — account path o
     agentAllowed: true,
     requiredModelsPending: true,
   });
-  assert.deepEqual(route.slice(0, 3), ["auth", "required-models", "permissions"]);
+  assert.deepEqual(route.slice(0, 3), ["permissions", "dictation-hotkey", "activation-mode"]);
 
   // Guests never fetch a policy, so the gate cannot apply to them.
   const guest = getOnboardingRoute({
@@ -378,8 +340,8 @@ test("required-models coexists with policy- and enterprise-shortened routes", as
     requiredModelsPending: true,
     skipSetupChoice: true,
   });
-  assert.deepEqual(route.slice(0, 3), ["auth", "required-models", "permissions"]);
-  assert.equal(route.at(-1), "notes");
+  assert.deepEqual(route.slice(0, 3), ["permissions", "dictation-hotkey", "activation-mode"]);
+  assert.equal(route.at(-1), "setup-choice");
   assert.equal(route.includes("assistant-hotkey"), false);
 });
 
@@ -400,8 +362,8 @@ test("the required-models step is counted in progress", async () => {
     agentAllowed: true,
     requiredModelsPending: true,
   });
-  assert.deepEqual(getOnboardingProgress("required-models", route), { index: 0, total: 10 });
-  assert.deepEqual(getOnboardingProgress("languages", route), { index: 1, total: 10 });
+  assert.equal(getOnboardingProgress("required-models", route), null);
+  assert.deepEqual(getOnboardingProgress("dictation-hotkey", route), { index: 0, total: 3 });
 });
 
 test("the tray suppression predicate matches only an active required-models session", async () => {

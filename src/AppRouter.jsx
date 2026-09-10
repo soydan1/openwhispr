@@ -2,7 +2,6 @@ import React, { Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import App from "./App.jsx";
 import AgentDictationPillOverlay from "./components/dictation/AgentDictationPillOverlay.tsx";
-import MeetingNotificationOverlay from "./components/MeetingNotificationOverlay.tsx";
 import ReauthenticationScreen from "./components/ReauthenticationScreen.tsx";
 import UpdateNotificationOverlay from "./components/UpdateNotificationOverlay.tsx";
 import BackgroundModelDownloadTray from "./components/onboarding/BackgroundModelDownloadTray.tsx";
@@ -14,6 +13,7 @@ import { mirrorActiveAccountScope } from "./lib/accountScopeMirror";
 import { usePolicyStore } from "./stores/policyStore";
 import { resolveSettledControlPanelWindowMode } from "./utils/controlPanelWindowMode.ts";
 import { isControlPanelWindow } from "./utils/windowContext.ts";
+import { PRODUCT_FEATURES } from "./config/productFeatures.js";
 
 // Either marker means the flow is mid-way: the legacy step key is kept for
 // back-compat, the v2 session is what the rebuilt flow actually persists.
@@ -27,10 +27,6 @@ const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"
 export default function AppRouter() {
   useTheme();
   const params = window.location.search;
-
-  if (params.includes("meeting-notification=true")) {
-    return <MeetingNotificationOverlay />;
-  }
 
   if (params.includes("update-notification=true")) {
     return <UpdateNotificationOverlay />;
@@ -51,7 +47,8 @@ function MainApp() {
     policyStatus === "managed" ||
     policyStatus === "unmanaged" ||
     policyStatus === "error";
-  const isWaitingForPolicyStart = isSignedIn && !policyResolved;
+  const isWaitingForPolicyStart =
+    PRODUCT_FEATURES.openWhisprAccount && isSignedIn && !policyResolved;
   const autoSyncReady = authLoaded && policyResolved;
 
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -77,7 +74,7 @@ function MainApp() {
     // the previous account's rows while validation is still running. A failed
     // (guest/offline) resolution also counts as settled: canSync() then no-ops
     // because no validated auth context exists.
-    if (autoSyncReady) {
+    if (PRODUCT_FEATURES.openWhisprAccount && autoSyncReady) {
       import("./services/SyncService.js")
         .then(({ syncService }) => syncService.startAutoSync())
         .catch(() => {});
@@ -111,7 +108,7 @@ function MainApp() {
     if (isControlPanel) {
       if (!resolved) {
         setShowOnboarding(true);
-      } else if (!isSignedIn && !authSkipped) {
+      } else if (PRODUCT_FEATURES.openWhisprAccount && !isSignedIn && !authSkipped) {
         setNeedsReauth(true);
       }
     }

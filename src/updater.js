@@ -1,5 +1,9 @@
 const { autoUpdater } = require("electron-updater");
 const { appUpdatesEnabled } = require("./helpers/updateCheckPolicy");
+const PRODUCT_FEATURES = require("./config/productFeatures.json");
+
+const UPDATES_DISABLED_MESSAGE =
+  "App updates are disabled in this fork so it cannot install OpenWhispr releases.";
 
 class UpdateManager {
   constructor() {
@@ -23,7 +27,7 @@ class UpdateManager {
   }
 
   setupAutoUpdater() {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" || !PRODUCT_FEATURES.appUpdates) {
       return;
     }
 
@@ -162,6 +166,13 @@ class UpdateManager {
 
   async checkForUpdates() {
     try {
+      if (!PRODUCT_FEATURES.appUpdates) {
+        return {
+          updateAvailable: false,
+          message: UPDATES_DISABLED_MESSAGE,
+        };
+      }
+
       if (process.env.NODE_ENV === "development") {
         return {
           updateAvailable: false,
@@ -197,6 +208,13 @@ class UpdateManager {
 
   async downloadUpdate() {
     try {
+      if (!PRODUCT_FEATURES.appUpdates) {
+        return {
+          success: false,
+          message: UPDATES_DISABLED_MESSAGE,
+        };
+      }
+
       if (process.env.NODE_ENV === "development") {
         return {
           success: false,
@@ -233,6 +251,13 @@ class UpdateManager {
 
   async installUpdate() {
     try {
+      if (!PRODUCT_FEATURES.appUpdates) {
+        return {
+          success: false,
+          message: UPDATES_DISABLED_MESSAGE,
+        };
+      }
+
       if (process.env.NODE_ENV === "development") {
         return {
           success: false,
@@ -314,6 +339,10 @@ class UpdateManager {
   }
 
   checkForUpdatesOnStartup() {
+    if (!PRODUCT_FEATURES.appUpdates) {
+      return;
+    }
+
     if (process.env.NODE_ENV !== "development") {
       setTimeout(() => {
         this._autoCheckForUpdates("Startup");

@@ -15,6 +15,7 @@ import { useWindowResizeCompensation } from "./hooks/useWindowResizeCompensation
 import { useSettingsStore } from "./stores/settingsStore";
 import { isAgentAllowed } from "./stores/policyRules";
 import { usePolicyStore } from "./stores/policyStore";
+import { PRODUCT_FEATURES } from "./config/productFeatures.js";
 import { VoicePill } from "./components/dictation/VoicePill";
 import { AssistantPanel } from "./components/dictation/AssistantPanel";
 import { LiveTranscriptPanel } from "./components/dictation/LiveTranscriptPanel";
@@ -711,7 +712,7 @@ export default function App() {
             <PillCommandMenu
               buttonRef={buttonRef}
               isRecording={isRecording}
-              agentAllowed={agentAllowed}
+              agentAllowed={PRODUCT_FEATURES.assistant && agentAllowed}
               isHovered={isHovered}
               setWindowInteractivity={setWindowInteractivity}
               onToggleListening={() => {

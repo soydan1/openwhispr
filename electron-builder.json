@@ -1,5 +1,6 @@
 {
   "appId": "com.gizmolabs.openwhispr",
+  "beforePack": "scripts/beforePack.js",
   "afterPack": "scripts/afterPack.js",
   "productName": "OpenWhispr",
   "protocols": {
@@ -88,7 +89,10 @@
     "!**/node_modules/**/.github/**"
   ],
   "asarUnpack": [
-    "**/node_modules/ffmpeg-static/**/*",
+    "**/node_modules/ffmpeg-static",
+    "**/node_modules/ffmpeg-static/**",
+    "**/node_modules/ffmpeg-static/ffmpeg",
+    "**/node_modules/ffmpeg-static/ffmpeg.exe",
     "**/node_modules/ps-list/**/*",
     "**/node_modules/better-sqlite3/**/*",
     "**/node_modules/onnxruntime-node/**/*",
@@ -106,28 +110,18 @@
         "whisper-server-*",
         "llama-server-*",
         "sherpa-onnx-*",
-        "yt-dlp-*",
-        "qdrant-*",
-        "macos-audio-tap",
         "macos-globe-listener",
         "macos-fast-paste",
         "macos-mic-listener",
-        "macos-calendar-listener",
         "macos-text-monitor",
         "macos-media-remote",
         "MediaRemoteAdapter.framework/**",
         "linux-fast-paste",
-        "linux-system-audio-helper",
         "linux-text-monitor",
         "linux-key-listener*",
-        "meeting-aec-helper-*",
         "windows-key-listener*",
-        "windows-mic-listener*",
-        "windows-system-audio-helper*",
         "windows-text-monitor*",
         "windows-fast-paste*",
-        "all-MiniLM-L6-v2/**/*",
-        "diarization-models/**/*",
         "whisper-vad/**/*",
         "*.dylib",
         "*.dll",
@@ -163,10 +157,7 @@
       "LSUIElement": false,
       "CFBundleIconName": "openwhispr",
       "NSMicrophoneUsageDescription": "OpenWhispr uses the microphone to capture your voice for transcription.",
-      "NSAudioCaptureUsageDescription": "OpenWhispr uses system audio to capture other participants' audio from calls and meetings.",
-      "NSAccessibilityUsageDescription": "OpenWhispr needs accessibility permissions to paste transcribed text into other applications.",
-      "NSCalendarsUsageDescription": "OpenWhispr reads your calendar to detect upcoming meetings and link meeting notes to events.",
-      "NSCalendarsFullAccessUsageDescription": "OpenWhispr reads your calendar to detect upcoming meetings and link meeting notes to events."
+      "NSAccessibilityUsageDescription": "OpenWhispr needs accessibility permissions to paste transcribed text into other applications."
     }
   },
   "win": {
@@ -265,12 +256,5 @@
       "width": 540,
       "height": 380
     }
-  },
-  "publish": {
-    "provider": "github",
-    "owner": "OpenWhispr",
-    "repo": "openwhispr",
-    "private": false,
-    "releaseType": "draft"
   }
 }

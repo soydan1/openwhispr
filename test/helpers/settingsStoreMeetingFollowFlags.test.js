@@ -95,24 +95,24 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
   // pinned per registry provider in settingsStoreLocalProviderMigrations.test.js).
   await t.test("legacy reasoning keys derive the same modes as before", async () => {
     const cases = [
-      [{ cloudReasoningMode: "byok", reasoningProvider: "custom" }, "self-hosted"],
-      [{ cloudReasoningMode: "byok", reasoningProvider: "bedrock" }, "enterprise"],
-      [{ cloudReasoningMode: "byok", reasoningProvider: "azure" }, "enterprise"],
-      [{ cloudReasoningMode: "byok", reasoningProvider: "vertex" }, "enterprise"],
-      [{ cloudReasoningMode: "byok", reasoningProvider: "anthropic" }, "providers"],
-      [{ cloudReasoningMode: "byok" }, "providers"],
-      [{ cloudReasoningMode: "openwhispr", reasoningProvider: "llama" }, "openwhispr"],
-      [{ reasoningProvider: "llama" }, "openwhispr"],
+      [{ cloudReasoningMode: "byok", reasoningProvider: "custom" }, "self-hosted", "self-hosted"],
+      [{ cloudReasoningMode: "byok", reasoningProvider: "bedrock" }, "providers", "enterprise"],
+      [{ cloudReasoningMode: "byok", reasoningProvider: "azure" }, "providers", "enterprise"],
+      [{ cloudReasoningMode: "byok", reasoningProvider: "vertex" }, "providers", "enterprise"],
+      [{ cloudReasoningMode: "byok", reasoningProvider: "anthropic" }, "providers", "providers"],
+      [{ cloudReasoningMode: "byok" }, "providers", "providers"],
+      [{ cloudReasoningMode: "openwhispr", reasoningProvider: "llama" }, "providers", "openwhispr"],
+      [{ reasoningProvider: "llama" }, "providers", "openwhispr"],
     ];
-    for (const [seed, expected] of cases) {
+    for (const [seed, cleanupExpected, agentExpected] of cases) {
       const { state } = await load({
         ...seed,
         cloudAgentMode: seed.cloudReasoningMode,
         agentProvider: seed.reasoningProvider,
       });
       // reasoningMode / agentInferenceMode are renamed by migrateLLMScopeKeys.
-      assert.equal(state.cleanupMode, expected, `reasoning ${JSON.stringify(seed)}`);
-      assert.equal(state.chatAgentMode, expected, `agent ${JSON.stringify(seed)}`);
+      assert.equal(state.cleanupMode, cleanupExpected, `reasoning ${JSON.stringify(seed)}`);
+      assert.equal(state.chatAgentMode, agentExpected, `agent ${JSON.stringify(seed)}`);
     }
   });
 
@@ -157,14 +157,14 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
     }
   );
 
-  await t.test("a ≤1.6.7 OpenWhispr Cloud profile stays on OpenWhispr Cloud", async () => {
+  await t.test("a ≤1.6.7 OpenWhispr Cloud profile falls back to BYOK providers", async () => {
     const { state } = await load({
       useLocalWhisper: "false",
       cloudTranscriptionMode: "openwhispr",
       cloudReasoningMode: "openwhispr",
       isSignedIn: "true",
     });
-    assert.equal(state.meetingTranscriptionMode, "openwhispr");
+    assert.equal(state.meetingTranscriptionMode, "providers");
     assert.equal(state.noteFormattingMode, "openwhispr");
   });
 
@@ -188,13 +188,13 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
     "a fresh install gets the default modes from the copy and nothing else",
     async () => {
       const { state } = await load({});
-      assert.equal(storage.getItem("meetingTranscriptionMode"), "openwhispr");
+      assert.equal(storage.getItem("meetingTranscriptionMode"), "providers");
       assert.equal(storage.getItem("noteFormattingMode"), "openwhispr");
       assert.equal(storage.getItem("meetingUseLocalWhisper"), null);
       assert.equal(storage.getItem("meetingCloudTranscriptionMode"), null);
       assert.equal(storage.getItem("noteFormattingCloudMode"), null);
       assert.equal(storage.getItem("meetingFollowsTranscription"), "false", "latched empty");
-      assert.equal(state.meetingTranscriptionMode, "openwhispr");
+      assert.equal(state.meetingTranscriptionMode, "providers");
       assert.equal(countWrites("meetingTranscriptionMode"), 1, "the copy, nothing after it");
       assert.equal(countWrites("noteFormattingMode"), 1);
     }
@@ -246,8 +246,8 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
       meetingCloudTranscriptionMode: "openwhispr",
       noteFormattingCloudMode: "openwhispr",
     });
-    assert.equal(storage.getItem("meetingTranscriptionMode"), "openwhispr", "persisted");
-    assert.equal(state.meetingTranscriptionMode, "openwhispr", "reconstructed, not localized");
+    assert.equal(storage.getItem("meetingTranscriptionMode"), "providers", "persisted");
+    assert.equal(state.meetingTranscriptionMode, "providers", "reconstructed, not localized");
     // A cloud reasoning snapshot is left absent, so note formatting keeps
     // following dictation cleanup. Same effective value here, no pin.
     assert.equal(storage.getItem("noteFormattingMode"), null);
@@ -292,7 +292,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
       assert.equal(storage.getItem("noteFormattingMode"), "local");
       assert.equal(mod.selectResolvedNoteFormatting(state).mode, "local");
       assert.equal(mod.selectIsCloudNoteFormattingMode(state), false, "not our servers");
-      assert.equal(state.cleanupMode, "openwhispr", "dictation cleanup untouched");
+      assert.equal(state.cleanupMode, "providers", "dictation cleanup untouched");
     }
   );
 
@@ -328,7 +328,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
         cloudTranscriptionMode: "openwhispr",
       });
       assert.equal(state.meetingTranscriptionMode, "local");
-      assert.equal(state.transcriptionMode, "openwhispr", "dictation untouched");
+      assert.equal(state.transcriptionMode, "providers", "dictation untouched");
     }
   );
 

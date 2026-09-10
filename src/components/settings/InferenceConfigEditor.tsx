@@ -30,6 +30,7 @@ import TestConnectionButton from "../TestConnectionButton";
 import { getEnterpriseCallSettings } from "../../services/ai/enterpriseSettings";
 import { Button } from "../ui/button";
 import { useStartOnboarding } from "../../hooks/useStartOnboarding";
+import { isInferenceModeEnabled } from "../../config/productFeatures.js";
 
 const MODE_LABEL_PREFIX: Record<InferenceScope, string> = {
   dictationCleanup: "settingsPage.aiModels.modes",
@@ -103,7 +104,10 @@ export default function InferenceConfigEditor({
           icon: <Building2 className="w-4 h-4" />,
         },
       ] as InferenceModeOption[]
-    ).filter((mode) => !allowedModes || allowedModes.includes(mode.id)),
+    ).filter(
+      (mode): mode is InferenceModeOption =>
+        isInferenceModeEnabled(mode.id) && (!allowedModes || allowedModes.includes(mode.id))
+    ),
     "llm",
     config.mode,
     {

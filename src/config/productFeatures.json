@@ -1,0 +1,16 @@
+{
+  "appUpdates": false,
+  "openWhisprCloud": false,
+  "openWhisprAccount": false,
+  "meetings": false,
+  "notes": false,
+  "assistant": false,
+  "calendar": false,
+  "insights": false,
+  "referrals": false,
+  "upload": false,
+  "integrations": false,
+  "chat": false,
+  "translationHotkey": false,
+  "enterprise": false
+}
